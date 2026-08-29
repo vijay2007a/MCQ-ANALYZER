@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SBK QUIZ ANALYZER - Access Denied</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-background": "#1a1c1c",
+                    "inverse-on-surface": "#f1f0f0",
+                    "surface-dim": "#dadad9",
+                    "background": "#faf9f8",
+                    "error": "#ba1a1a",
+                    "surface-container-lowest": "#ffffff",
+                    "outline": "#737686",
+                    "primary-container": "#2563eb",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "tertiary": "#943700",
+                    "inverse-primary": "#b4c5ff",
+                    "secondary-fixed": "#dde2f3",
+                    "on-tertiary-fixed": "#360f00",
+                    "surface-container-highest": "#e3e2e1",
+                    "on-primary-container": "#eeefff",
+                    "tertiary-fixed": "#ffdbcd",
+                    "surface-variant": "#e3e2e1",
+                    "secondary": "#585e6c",
+                    "surface-container-high": "#e9e8e7",
+                    "surface-tint": "#0053db",
+                    "outline-variant": "#c3c6d7",
+                    "surface-container-low": "#f4f3f2",
+                    "on-surface": "#1a1c1c",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "surface-bright": "#faf9f8",
+                    "on-tertiary-fixed-variant": "#7d2d00",
+                    "on-primary-fixed": "#00174b",
+                    "on-error": "#ffffff",
+                    "on-secondary-container": "#5e6473",
+                    "inverse-surface": "#2f3130",
+                    "on-secondary-fixed-variant": "#414754",
+                    "primary-fixed": "#dbe1ff",
+                    "on-tertiary": "#ffffff",
+                    "surface": "#faf9f8",
+                    "on-surface-variant": "#434655",
+                    "tertiary-container": "#bc4800",
+                    "error-container": "#ffdad6",
+                    "surface-container": "#eeeeed",
+                    "on-tertiary-container": "#ffede6",
+                    "tertiary-fixed-dim": "#ffb596",
+                    "secondary-fixed-dim": "#c1c6d7",
+                    "on-error-container": "#93000a",
+                    "secondary-container": "#dde2f3",
+                    "on-secondary-fixed": "#161c27",
+                    "on-secondary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "primary": "#004ac6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "margin-mobile": "16px",
+                    "unit": "4px",
+                    "stack-md": "24px",
+                    "stack-lg": "40px",
+                    "container-max": "1140px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": [
+                            "\"Source Serif 4\""
+                    ],
+                    "headline-lg": [
+                            "\"Source Serif 4\""
+                    ],
+                    "headline-md": [
+                            "\"Source Serif 4\""
+                    ],
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "\"Source Serif 4\""
+                    ]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": [
+                            "28px",
+                            {
+                                    "lineHeight": "36px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "56px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        h1, h2, h3, h4, h5, h6, .serif {
+            font-family: 'Source Serif 4', serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+<!-- TopNavBar Suppressed as per rule: Linear/Transactional/Error screens hide navigation shell -->
+<main class="flex-grow flex items-center justify-center p-margin-mobile md:p-gutter w-full">
+<div class="max-w-[600px] w-full bg-surface-container-lowest border border-outline-variant p-8 md:p-12 text-center rounded-lg shadow-[0px_4px_20px_rgba(0,0,0,0.05)] relative overflow-hidden">
+<!-- Decorative Accent Bar -->
+<div class="absolute top-0 left-0 w-full h-1 bg-error"></div>
+<div class="mb-stack-md flex justify-center">
+<div class="w-16 h-16 rounded-full bg-error-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-error-container text-4xl" data-icon="block" style="font-variation-settings: 'FILL' 1;">
+                        block
+                    </span>
+</div>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface mb-unit">
+                Access Denied
+            </h1>
+<p class="font-body-md text-body-md text-on-surface-variant mb-stack-lg max-w-md mx-auto">
+                You do not have the necessary permissions to view this assessment or administrative panel. Please ensure you are logged in with the correct academic credentials.
+            </p>
+<div class="flex flex-col sm:flex-row gap-4 justify-center">
+<button class="bg-primary hover:bg-primary-container text-on-primary font-label-sm text-label-sm px-6 py-3 rounded transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="home">home</span>
+                    Back to Home
+                </button>
+<button class="bg-transparent border border-outline-variant hover:bg-surface-container-low text-primary font-label-sm text-label-sm px-6 py-3 rounded transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="login">login</span>
+                    Sign In Again
+                </button>
+</div>
+<!-- Contextual Error Code -->
+<div class="mt-stack-lg pt-stack-md border-t border-outline-variant flex items-center justify-center gap-2">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Error Reference:</span>
+<code class="font-mono text-xs bg-surface-container-low px-2 py-1 rounded text-secondary">ERR_UNAUTHORIZED_403</code>
+</div>
+</div>
+</main>
+<!-- Footer (Using JSON configuration) -->
+<footer class="bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant w-full py-8 mt-stack-lg">
+<div class="flex flex-col md:flex-row justify-between items-center px-gutter max-w-container-max mx-auto gap-4">
+<div class="font-headline-md text-headline-md text-secondary dark:text-secondary-fixed">
+                SBK QUIZ ANALYZER
+            </div>
+<div class="font-label-sm text-label-sm text-secondary dark:text-secondary-fixed">
+                © 2024 SBK Institute
+            </div>
+<nav class="flex gap-6">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors underline" href="#">About</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors underline" href="#">Privacy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors underline" href="#">Terms</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors underline" href="#">Admin Portal</a>
+</nav>
+</div>
+</footer>
+</body></html>

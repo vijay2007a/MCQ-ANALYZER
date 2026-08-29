@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SBK QUIZ ANALYZER - Delete Quiz Confirmation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&amp;family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#1a1c1c",
+                        "inverse-on-surface": "#f1f0f0",
+                        "surface-dim": "#dadad9",
+                        "background": "#faf9f8",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#737686",
+                        "primary-container": "#2563eb",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "tertiary": "#943700",
+                        "inverse-primary": "#b4c5ff",
+                        "secondary-fixed": "#dde2f3",
+                        "on-tertiary-fixed": "#360f00",
+                        "surface-container-highest": "#e3e2e1",
+                        "on-primary-container": "#eeefff",
+                        "tertiary-fixed": "#ffdbcd",
+                        "surface-variant": "#e3e2e1",
+                        "secondary": "#585e6c",
+                        "surface-container-high": "#e9e8e7",
+                        "surface-tint": "#0053db",
+                        "outline-variant": "#c3c6d7",
+                        "surface-container-low": "#f4f3f2",
+                        "on-surface": "#1a1c1c",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-bright": "#faf9f8",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "on-primary-fixed": "#00174b",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#5e6473",
+                        "inverse-surface": "#2f3130",
+                        "on-secondary-fixed-variant": "#414754",
+                        "primary-fixed": "#dbe1ff",
+                        "on-tertiary": "#ffffff",
+                        "surface": "#faf9f8",
+                        "on-surface-variant": "#434655",
+                        "tertiary-container": "#bc4800",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eeeeed",
+                        "on-tertiary-container": "#ffede6",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "secondary-fixed-dim": "#c1c6d7",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#dde2f3",
+                        "on-secondary-fixed": "#161c27",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary": "#004ac6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "margin-mobile": "16px",
+                        "unit": "4px",
+                        "stack-md": "24px",
+                        "stack-lg": "40px",
+                        "container-max": "1140px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["\"Source Serif 4\""],
+                        "headline-lg": ["\"Source Serif 4\""],
+                        "headline-md": ["\"Source Serif 4\""],
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["\"Source Serif 4\""]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen relative overflow-hidden font-body-md text-body-md">
+<!-- Mock Background Content (Quiz Management) -->
+<div class="absolute inset-0 bg-surface-container-low dark:bg-surface-container-lowest opacity-40 blur-sm pointer-events-none z-0 hidden md:block">
+<!-- Side Nav Mock -->
+<div class="h-full w-64 fixed left-0 top-0 border-r border-outline-variant bg-surface-container-low dark:bg-surface-container-lowest"></div>
+<!-- Top App Bar Mock -->
+<div class="flex justify-between items-center px-gutter py-3 w-full pl-64 border-b border-outline-variant bg-surface dark:bg-surface-variant fixed top-0"></div>
+</div>
+<div class="absolute inset-0 bg-surface dark:bg-surface-variant opacity-40 blur-sm pointer-events-none z-0 md:hidden block"></div>
+<!-- Modal Backdrop overlay -->
+<div aria-modal="true" class="fixed inset-0 bg-on-background/40 backdrop-blur-sm z-40 flex items-center justify-center px-margin-mobile md:px-gutter" role="dialog">
+<!-- Delete Confirmation Modal -->
+<div class="bg-surface-container-lowest rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant w-full max-w-md overflow-hidden animate-[fade-in_0.2s_ease-out]">
+<!-- Header area with danger indicator -->
+<div class="p-6 pb-4 border-b border-outline-variant flex items-start gap-4">
+<div class="flex-shrink-0 w-12 h-12 bg-error-container rounded-full flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-3xl" data-icon="delete_forever" data-weight="fill">delete_forever</span>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-2">Delete Quiz?</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Are you sure you want to permanently delete this quiz? This action cannot be undone and all associated data will be lost.</p>
+</div>
+</div>
+<!-- Quiz Details Preview (Optional Context) -->
+<div class="p-6 bg-surface-container-low border-b border-outline-variant">
+<div class="flex flex-col gap-1">
+<span class="font-label-sm text-label-sm text-secondary uppercase tracking-wider">Quiz Target</span>
+<span class="font-body-md text-body-md text-on-surface font-semibold">Midterm Examination: Advanced Algorithms</span>
+</div>
+</div>
+<!-- Actions -->
+<div class="p-6 pt-4 bg-surface-container-lowest flex justify-end gap-3">
+<button class="px-6 py-2 rounded border border-outline-variant text-on-surface font-label-sm text-label-sm hover:bg-surface-container-low transition-colors focus:ring-2 focus:ring-primary focus:outline-none">
+                    Cancel
+                </button>
+<button class="px-6 py-2 rounded bg-error text-on-error font-label-sm text-label-sm hover:bg-error/90 transition-colors focus:ring-2 focus:ring-error focus:ring-offset-2 focus:ring-offset-surface-container-lowest focus:outline-none flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span>
+                    Delete Quiz
+                </button>
+</div>
+</div>
+</div>
+</body></html>

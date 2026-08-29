@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SBK QUIZ ANALYZER - Admin Results</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-background": "#1a1c1c",
+                    "inverse-on-surface": "#f1f0f0",
+                    "surface-dim": "#dadad9",
+                    "background": "#faf9f8",
+                    "error": "#ba1a1a",
+                    "surface-container-lowest": "#ffffff",
+                    "outline": "#737686",
+                    "primary-container": "#2563eb",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "tertiary": "#943700",
+                    "inverse-primary": "#b4c5ff",
+                    "secondary-fixed": "#dde2f3",
+                    "on-tertiary-fixed": "#360f00",
+                    "surface-container-highest": "#e3e2e1",
+                    "on-primary-container": "#eeefff",
+                    "tertiary-fixed": "#ffdbcd",
+                    "surface-variant": "#e3e2e1",
+                    "secondary": "#585e6c",
+                    "surface-container-high": "#e9e8e7",
+                    "surface-tint": "#0053db",
+                    "outline-variant": "#c3c6d7",
+                    "surface-container-low": "#f4f3f2",
+                    "on-surface": "#1a1c1c",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "surface-bright": "#faf9f8",
+                    "on-tertiary-fixed-variant": "#7d2d00",
+                    "on-primary-fixed": "#00174b",
+                    "on-error": "#ffffff",
+                    "on-secondary-container": "#5e6473",
+                    "inverse-surface": "#2f3130",
+                    "on-secondary-fixed-variant": "#414754",
+                    "primary-fixed": "#dbe1ff",
+                    "on-tertiary": "#ffffff",
+                    "surface": "#faf9f8",
+                    "on-surface-variant": "#434655",
+                    "tertiary-container": "#bc4800",
+                    "error-container": "#ffdad6",
+                    "surface-container": "#eeeeed",
+                    "on-tertiary-container": "#ffede6",
+                    "tertiary-fixed-dim": "#ffb596",
+                    "secondary-fixed-dim": "#c1c6d7",
+                    "on-error-container": "#93000a",
+                    "secondary-container": "#dde2f3",
+                    "on-secondary-fixed": "#161c27",
+                    "on-secondary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "primary": "#004ac6"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "margin-mobile": "16px",
+                    "unit": "4px",
+                    "stack-md": "24px",
+                    "stack-lg": "40px",
+                    "container-max": "1140px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": [
+                            "\"Source Serif 4\""
+                    ],
+                    "headline-lg": [
+                            "\"Source Serif 4\""
+                    ],
+                    "headline-md": [
+                            "\"Source Serif 4\""
+                    ],
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "body-lg": [
+                            "Inter"
+                    ],
+                    "body-md": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "\"Source Serif 4\""
+                    ]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": [
+                            "28px",
+                            {
+                                    "lineHeight": "36px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "56px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        /* Custom scrollbar for table */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #c3c6d7;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex font-body-md text-body-md">
+<!-- SideNavBar (Shared Component Blueprint) -->
+<nav class="h-full w-64 fixed left-0 top-0 bg-surface-container-low border-r border-outline-variant flex flex-col h-full py-6 gap-2 z-40 hidden md:flex">
+<div class="px-gutter mb-stack-md">
+<h1 class="font-headline-md text-headline-md text-on-surface">Admin Panel</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">University Assessment</p>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar px-4 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high hover:bg-surface-container-highest transition-all rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high hover:bg-surface-container-highest transition-all rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" data-icon="quiz">quiz</span>
+<span class="font-label-sm text-label-sm">Quizzes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high hover:bg-surface-container-highest transition-all rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="font-label-sm text-label-sm">Create Quiz</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer bg-secondary-container text-on-secondary-container font-semibold rounded-lg hover:bg-surface-container-highest transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="analytics" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="font-label-sm text-label-sm">Results</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high hover:bg-surface-container-highest transition-all rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" data-icon="leaderboard">leaderboard</span>
+<span class="font-label-sm text-label-sm">Leaderboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high hover:bg-surface-container-highest transition-all rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-sm text-label-sm">Settings</span>
+</a>
+</div>
+<div class="px-4 mt-auto">
+<a class="flex items-center gap-3 px-4 py-3 cursor-pointer text-on-surface-variant hover:bg-surface-container-high hover:bg-surface-container-highest transition-all rounded-DEFAULT" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-label-sm text-label-sm">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-0 md:ml-64 flex flex-col min-h-screen">
+<!-- TopAppBar (Center-aligned pattern as seen in standard designs, simplified for admin canvas priority) -->
+<header class="flex justify-between items-center px-gutter py-4 w-full bg-surface border-b border-outline-variant sticky top-0 z-30">
+<div class="flex items-center gap-4">
+<button class="md:hidden text-on-surface p-2 rounded hover:bg-surface-container-low transition-all">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h2 class="font-headline-md text-headline-md text-on-surface">Results</h2>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-surface-container-low p-2 rounded-full transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<div class="p-gutter md:p-stack-md flex-1 max-w-container-max mx-auto w-full">
+<!-- Empty Stats Section (Bento Grid pattern) -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter mb-stack-lg">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] flex flex-col gap-2">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Total Attempts</h3>
+<p class="font-display-lg text-display-lg text-on-surface tabular-nums">0</p>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] flex flex-col gap-2">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Average Score</h3>
+<p class="font-display-lg text-display-lg text-on-surface tabular-nums">--</p>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] flex flex-col gap-2">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Average Accuracy</h3>
+<p class="font-display-lg text-display-lg text-on-surface tabular-nums">--%</p>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] flex flex-col gap-2">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Avg Completion Time</h3>
+<p class="font-display-lg text-display-lg text-on-surface tabular-nums">--:--</p>
+</div>
+</section>
+<!-- Table Section with Filters -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col">
+<!-- Filters Toolbar -->
+<div class="p-6 border-b border-outline-variant flex flex-col md:flex-row gap-4 justify-between items-center bg-background">
+<div class="relative w-full md:w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface pl-10 pr-4 py-2 border-b-2 border-outline-variant focus:border-primary focus:outline-none focus:ring-0 font-body-md text-body-md bg-[#F9FAFB]" placeholder="Search results..." type="text"/>
+</div>
+<div class="flex gap-3 w-full md:w-auto">
+<button class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-transparent border border-outline-variant rounded-DEFAULT font-label-sm text-label-sm text-secondary hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                            Filter
+                        </button>
+<button class="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-transparent border border-outline-variant rounded-DEFAULT font-label-sm text-label-sm text-secondary hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">sort</span>
+                            Sort
+                        </button>
+</div>
+</div>
+<!-- Empty State Content -->
+<div class="flex-1 p-stack-lg flex flex-col items-center justify-center min-h-[400px] text-center">
+<div class="w-24 h-24 mb-6 rounded-full bg-surface-container flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-[48px]" style="font-variation-settings: 'wght' 200;">search_off</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">No results yet</h3>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-md">Once students begin taking assessments, their performance data, scores, and completion times will populate here.</p>
+</div>
+<!-- Hidden Table Structure (for reference/blueprint) -->
+<div class="hidden overflow-x-auto custom-scrollbar w-full">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant font-semibold whitespace-nowrap">Player</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant font-semibold whitespace-nowrap">Quiz</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant font-semibold whitespace-nowrap text-right">Score</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant font-semibold whitespace-nowrap text-right">Accuracy</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant font-semibold whitespace-nowrap text-right">Time</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant font-semibold whitespace-nowrap">Completed At</th>
+</tr>
+</thead>
+<tbody>
+<!-- Rows would go here -->
+</tbody>
+</table>
+</div>
+<!-- Pagination (Disabled State) -->
+<div class="p-4 border-t border-outline-variant flex items-center justify-between bg-background">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Showing 0 of 0 results</span>
+<div class="flex gap-2">
+<button class="p-2 border border-outline-variant rounded-DEFAULT text-outline opacity-50 cursor-not-allowed flex items-center justify-center" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="p-2 border border-outline-variant rounded-DEFAULT text-outline opacity-50 cursor-not-allowed flex items-center justify-center" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SBK QUIZ ANALYZER - Player Name Entry</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#1a1c1c",
+                        "inverse-on-surface": "#f1f0f0",
+                        "surface-dim": "#dadad9",
+                        "background": "#faf9f8",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#737686",
+                        "primary-container": "#2563eb",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "tertiary": "#943700",
+                        "inverse-primary": "#b4c5ff",
+                        "secondary-fixed": "#dde2f3",
+                        "on-tertiary-fixed": "#360f00",
+                        "surface-container-highest": "#e3e2e1",
+                        "on-primary-container": "#eeefff",
+                        "tertiary-fixed": "#ffdbcd",
+                        "surface-variant": "#e3e2e1",
+                        "secondary": "#585e6c",
+                        "surface-container-high": "#e9e8e7",
+                        "surface-tint": "#0053db",
+                        "outline-variant": "#c3c6d7",
+                        "surface-container-low": "#f4f3f2",
+                        "on-surface": "#1a1c1c",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-bright": "#faf9f8",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "on-primary-fixed": "#00174b",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#5e6473",
+                        "inverse-surface": "#2f3130",
+                        "on-secondary-fixed-variant": "#414754",
+                        "primary-fixed": "#dbe1ff",
+                        "on-tertiary": "#ffffff",
+                        "surface": "#faf9f8",
+                        "on-surface-variant": "#434655",
+                        "tertiary-container": "#bc4800",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eeeeed",
+                        "on-tertiary-container": "#ffede6",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "secondary-fixed-dim": "#c1c6d7",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#dde2f3",
+                        "on-secondary-fixed": "#161c27",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary": "#004ac6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "margin-mobile": "16px",
+                        "unit": "4px",
+                        "stack-md": "24px",
+                        "stack-lg": "40px",
+                        "container-max": "1140px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["\"Source Serif 4\""],
+                        "headline-lg": ["\"Source Serif 4\""],
+                        "headline-md": ["\"Source Serif 4\""],
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["\"Source Serif 4\""]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background h-full font-body-md text-body-md antialiased flex flex-col">
+<!-- The Nav is suppressed because this is a transactional flow (Player Name Entry). -->
+<main class="flex-grow flex items-center justify-center p-margin-mobile md:p-gutter">
+<div class="w-full max-w-[480px]">
+<a class="inline-flex items-center gap-2 text-primary hover:text-on-primary-fixed-variant transition-colors mb-stack-lg font-label-sm text-label-sm" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px;">arrow_back</span>
+                Back to Home
+            </a>
+<div class="bg-surface-container-lowest border border-[#E5E7EB] rounded-lg p-[32px]">
+<div class="text-center mb-stack-lg">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface mb-2">
+                        Ready to Play?
+                    </h1>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                        Enter your name to continue.
+                    </p>
+</div>
+<form action="#" class="flex flex-col gap-stack-md" method="POST">
+<div>
+<label class="sr-only" for="playerName">Your Name</label>
+<input autocomplete="off" class="w-full bg-[#F9FAFB] border-0 border-b-2 border-outline-variant focus:border-primary focus:ring-0 px-4 py-3 font-body-lg text-body-lg text-on-surface transition-colors placeholder:text-outline" id="playerName" name="playerName" placeholder="Your Name" required="" type="text"/>
+</div>
+<button class="w-full bg-[#2563EB] text-[#FFFFFF] font-label-sm text-label-sm py-4 px-6 rounded-DEFAULT hover:bg-on-primary-fixed-variant transition-colors flex items-center justify-center gap-2 mt-4" type="submit">
+                        Continue
+                        <span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+</button>
+</form>
+</div>
+</div>
+</main>
+</body></html>

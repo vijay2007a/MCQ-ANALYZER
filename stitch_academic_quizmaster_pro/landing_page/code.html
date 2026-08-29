@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SBK QUIZ ANALYZER - Landing Page</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Source+Serif+4:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#1a1c1c",
+                        "inverse-on-surface": "#f1f0f0",
+                        "surface-dim": "#dadad9",
+                        "background": "#faf9f8",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#737686",
+                        "primary-container": "#2563eb",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "tertiary": "#943700",
+                        "inverse-primary": "#b4c5ff",
+                        "secondary-fixed": "#dde2f3",
+                        "on-tertiary-fixed": "#360f00",
+                        "surface-container-highest": "#e3e2e1",
+                        "on-primary-container": "#eeefff",
+                        "tertiary-fixed": "#ffdbcd",
+                        "surface-variant": "#e3e2e1",
+                        "secondary": "#585e6c",
+                        "surface-container-high": "#e9e8e7",
+                        "surface-tint": "#0053db",
+                        "outline-variant": "#c3c6d7",
+                        "surface-container-low": "#f4f3f2",
+                        "on-surface": "#1a1c1c",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-bright": "#faf9f8",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "on-primary-fixed": "#00174b",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#5e6473",
+                        "inverse-surface": "#2f3130",
+                        "on-secondary-fixed-variant": "#414754",
+                        "primary-fixed": "#dbe1ff",
+                        "on-tertiary": "#ffffff",
+                        "surface": "#faf9f8",
+                        "on-surface-variant": "#434655",
+                        "tertiary-container": "#bc4800",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eeeeed",
+                        "on-tertiary-container": "#ffede6",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "secondary-fixed-dim": "#c1c6d7",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#dde2f3",
+                        "on-secondary-fixed": "#161c27",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary": "#004ac6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "margin-mobile": "16px",
+                        "unit": "4px",
+                        "stack-md": "24px",
+                        "stack-lg": "40px",
+                        "container-max": "1140px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["\"Source Serif 4\""],
+                        "headline-lg": ["\"Source Serif 4\""],
+                        "headline-md": ["\"Source Serif 4\""],
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["\"Source Serif 4\""]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background antialiased selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="bg-surface border-b border-outline-variant docked full-width top-0 sticky z-50 transition-all duration-200 shadow-sm">
+<div class="flex justify-between items-center px-gutter py-4 w-full max-w-container-max mx-auto">
+<div class="font-headline-md text-headline-md font-bold text-primary">
+                SBK QUIZ ANALYZER
+            </div>
+<div class="hidden md:flex gap-6 items-center">
+<a class="font-body-md text-body-md text-primary font-bold border-b-2 border-primary pb-1 cursor-pointer transition-opacity active:opacity-80" href="#">Quizzes</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors cursor-pointer transition-opacity active:opacity-80" href="#">Leaderboard</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors cursor-pointer transition-opacity active:opacity-80" href="#">Admin Portal</a>
+</div>
+<button class="md:hidden text-primary">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow flex flex-col">
+<!-- Hero Section -->
+<header class="w-full max-w-container-max mx-auto px-margin-mobile md:px-gutter py-stack-lg md:py-24 flex flex-col md:flex-row items-center gap-stack-lg">
+<div class="w-full md:w-1/2 flex flex-col items-start gap-stack-md">
+<h1 class="font-display-lg text-display-lg md:text-[64px] md:leading-[72px] text-on-surface font-bold tracking-tight">
+                    Challenge Your Knowledge
+                </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-lg">
+                    Test your knowledge, learn from every answer, and compete with your classmates in a rigorous academic environment.
+                </p>
+<div class="flex flex-col sm:flex-row gap-4 mt-4 w-full sm:w-auto">
+<button class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-3 rounded hover:bg-primary-container transition-colors shadow-sm">
+                        Start Playing
+                    </button>
+<button class="bg-transparent border border-outline text-on-surface font-label-sm text-label-sm px-6 py-3 rounded hover:bg-surface-container-low transition-colors">
+                        View Quizzes
+                    </button>
+</div>
+</div>
+<div class="w-full md:w-1/2 rounded-xl overflow-hidden border border-outline-variant shadow-sm h-64 md:h-[400px]">
+<img class="w-full h-full object-cover" data-alt="A focused student sitting in a modern, well-lit university library, engaged in an online quiz on a laptop. The lighting is bright and even, highlighting an academic, classical premium aesthetic with ivory surfaces and crisp blue accents. The mood is serious and intellectual." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpO9svrbJFR-EikTnajPlfzrE8RTMVWYd16JGcHF5HSiUQSYcLcGhuqTLuZeprZn5IjNrZvqIlQlQKzhClTT7_a_MaKhVNp_EyW2TlE_GStf5G6wfem3Kodn4QWaDE9sVAEtY-y0gB0CH2euecg6I7j37pVFyanVpLtdVcmuLc-PtSGfv-9SOKYj30h7XSqQKtSzclgyRb3SiKebX9Q6uMvs6u1AHWhQ1d7BEUICXWXXJtlJTa0A"/>
+</div>
+</header>
+<!-- How It Works Section (Bento Grid) -->
+<section class="w-full max-w-container-max mx-auto px-margin-mobile md:px-gutter py-stack-lg border-t border-outline-variant">
+<div class="text-center mb-stack-lg">
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-2">How It Works</h2>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl mx-auto">A streamlined process designed for deep learning and accurate assessment.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Choose -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-8 flex flex-col items-center text-center shadow-sm hover:shadow-[0px_4px_20px_rgba(0,0,0,0.05)] transition-shadow">
+<div class="w-16 h-16 rounded-full bg-primary-fixed flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-on-primary-fixed text-3xl" data-icon="library_books">library_books</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-3">Choose</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Select from a wide array of meticulously curated academic topics.</p>
+</div>
+<!-- Answer -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-8 flex flex-col items-center text-center shadow-sm hover:shadow-[0px_4px_20px_rgba(0,0,0,0.05)] transition-shadow">
+<div class="w-16 h-16 rounded-full bg-secondary-fixed flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-on-secondary-fixed text-3xl" data-icon="edit_note">edit_note</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-3">Answer</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Engage with complex questions under a fixed-grid, distraction-free interface.</p>
+</div>
+<!-- Results -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-8 flex flex-col items-center text-center shadow-sm hover:shadow-[0px_4px_20px_rgba(0,0,0,0.05)] transition-shadow">
+<div class="w-16 h-16 rounded-full bg-tertiary-fixed flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-on-tertiary-fixed text-3xl" data-icon="analytics">analytics</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-3">Results</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Review comprehensive analytics and detailed explanations for every response.</p>
+</div>
+</div>
+</section>
+<!-- Features Asymmetric Section -->
+<section class="w-full bg-surface-container-low border-y border-outline-variant py-stack-lg md:py-24">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-gutter flex flex-col gap-24">
+<!-- Instant Feedback -->
+<div class="flex flex-col md:flex-row items-center gap-12">
+<div class="w-full md:w-1/2 order-2 md:order-1">
+<div class="bg-surface-container-lowest p-8 border border-outline-variant rounded-xl shadow-sm relative overflow-hidden h-64 md:h-80 flex flex-col">
+<div class="flex items-center gap-3 mb-6 border-b border-outline-variant pb-4">
+<div class="w-3 h-3 rounded-full bg-error"></div>
+<div class="h-2 bg-surface-variant w-32 rounded"></div>
+</div>
+<div class="flex-grow flex flex-col gap-4">
+<div class="h-4 bg-surface-variant w-full rounded"></div>
+<div class="h-4 bg-surface-variant w-5/6 rounded"></div>
+<div class="mt-auto p-4 bg-error-container text-on-error-container rounded border border-error/20 flex items-start gap-3">
+<span class="material-symbols-outlined mt-0.5" data-icon="info">info</span>
+<div class="font-body-md text-sm">Detailed explanation of the core concept appears immediately after submission.</div>
+</div>
+</div>
+</div>
+</div>
+<div class="w-full md:w-1/2 order-1 md:order-2 flex flex-col items-start gap-4">
+<span class="font-label-sm text-label-sm text-primary uppercase tracking-widest">Pedagogy First</span>
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Instant Feedback</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">True mastery comes from immediate correction. Review detailed explanations the moment a question is answered to reinforce concepts before moving forward.</p>
+</div>
+</div>
+<!-- Time-Based Scoring -->
+<div class="flex flex-col md:flex-row items-center gap-12">
+<div class="w-full md:w-1/2 flex flex-col items-start gap-4">
+<span class="font-label-sm text-label-sm text-primary uppercase tracking-widest">Assessment Rigor</span>
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Time-Based Scoring</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Efficiency indicates proficiency. Earn higher scores for rapid, accurate responses while maintaining composure under pressure.</p>
+</div>
+<div class="w-full md:w-1/2">
+<div class="bg-surface-container-lowest p-8 border border-outline-variant rounded-xl shadow-sm relative overflow-hidden h-64 md:h-80 flex items-center justify-center">
+<div class="w-48 h-48 rounded-full border-[8px] border-surface-variant relative flex items-center justify-center">
+<div class="absolute inset-0 rounded-full border-[8px] border-primary" style="clip-path: polygon(50% 50%, 50% 0, 100% 0, 100% 40%, 50% 50%);"></div>
+<div class="text-center">
+<div class="font-headline-md text-primary mb-1"><span class="material-symbols-outlined text-4xl" data-icon="timer">timer</span></div>
+<div class="font-body-md font-bold text-on-surface tabular-nums text-xl">00:15:00</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Leaderboards -->
+<div class="flex flex-col md:flex-row items-center gap-12">
+<div class="w-full md:w-1/2 order-2 md:order-1">
+<div class="bg-surface-container-lowest p-6 border border-outline-variant rounded-xl shadow-sm h-64 md:h-80 flex flex-col gap-3">
+<div class="flex items-center justify-between p-3 bg-surface-container-high rounded border border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-6 font-bold text-primary">1</div>
+<div class="w-8 h-8 rounded bg-primary-container text-on-primary-container flex items-center justify-center text-xs">J.D.</div>
+<div class="font-body-md font-semibold">Jane Doe</div>
+</div>
+<div class="font-body-md font-bold tabular-nums">9,450</div>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface rounded border border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-6 font-bold text-on-surface-variant">2</div>
+<div class="w-8 h-8 rounded bg-surface-variant flex items-center justify-center text-xs">R.S.</div>
+<div class="font-body-md">Robert Smith</div>
+</div>
+<div class="font-body-md font-bold tabular-nums text-on-surface-variant">8,920</div>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface rounded border border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-6 font-bold text-on-surface-variant">3</div>
+<div class="w-8 h-8 rounded bg-surface-variant flex items-center justify-center text-xs">A.L.</div>
+<div class="font-body-md">Alice Lee</div>
+</div>
+<div class="font-body-md font-bold tabular-nums text-on-surface-variant">8,810</div>
+</div>
+</div>
+</div>
+<div class="w-full md:w-1/2 order-1 md:order-2 flex flex-col items-start gap-4">
+<span class="font-label-sm text-label-sm text-primary uppercase tracking-widest">Cohort Ranking</span>
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Leaderboards</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Measure your progress against peers. Transparent rankings foster healthy academic competition and drive continuous improvement.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest dark:bg-inverse-surface w-full py-8 mt-stack-lg border-t border-outline-variant">
+<div class="flex flex-col md:flex-row justify-between items-center px-gutter max-w-container-max mx-auto gap-4">
+<div class="font-headline-md text-headline-md text-on-surface">
+                SBK QUIZ ANALYZER
+            </div>
+<div class="flex flex-wrap gap-6 justify-center">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">About</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Terms</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Admin Portal</a>
+</div>
+<div class="font-label-sm text-label-sm text-secondary dark:text-secondary-fixed">
+                © 2024 SBK Institute
+            </div>
+</div>
+</footer>
+</body></html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SBK QUIZ ANALYZER - Quiz Question</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-background": "#1a1c1c",
+                      "inverse-on-surface": "#f1f0f0",
+                      "surface-dim": "#dadad9",
+                      "background": "#faf9f8",
+                      "error": "#ba1a1a",
+                      "surface-container-lowest": "#ffffff",
+                      "outline": "#737686",
+                      "primary-container": "#2563eb",
+                      "on-primary-fixed-variant": "#003ea8",
+                      "tertiary": "#943700",
+                      "inverse-primary": "#b4c5ff",
+                      "secondary-fixed": "#dde2f3",
+                      "on-tertiary-fixed": "#360f00",
+                      "surface-container-highest": "#e3e2e1",
+                      "on-primary-container": "#eeefff",
+                      "tertiary-fixed": "#ffdbcd",
+                      "surface-variant": "#e3e2e1",
+                      "secondary": "#585e6c",
+                      "surface-container-high": "#e9e8e7",
+                      "surface-tint": "#0053db",
+                      "outline-variant": "#c3c6d7",
+                      "surface-container-low": "#f4f3f2",
+                      "on-surface": "#1a1c1c",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "surface-bright": "#faf9f8",
+                      "on-tertiary-fixed-variant": "#7d2d00",
+                      "on-primary-fixed": "#00174b",
+                      "on-error": "#ffffff",
+                      "on-secondary-container": "#5e6473",
+                      "inverse-surface": "#2f3130",
+                      "on-secondary-fixed-variant": "#414754",
+                      "primary-fixed": "#dbe1ff",
+                      "on-tertiary": "#ffffff",
+                      "surface": "#faf9f8",
+                      "on-surface-variant": "#434655",
+                      "tertiary-container": "#bc4800",
+                      "error-container": "#ffdad6",
+                      "surface-container": "#eeeeed",
+                      "on-tertiary-container": "#ffede6",
+                      "tertiary-fixed-dim": "#ffb596",
+                      "secondary-fixed-dim": "#c1c6d7",
+                      "on-error-container": "#93000a",
+                      "secondary-container": "#dde2f3",
+                      "on-secondary-fixed": "#161c27",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "primary": "#004ac6"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "margin-mobile": "16px",
+                      "unit": "4px",
+                      "stack-md": "24px",
+                      "stack-lg": "40px",
+                      "container-max": "1140px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": [
+                              "\"Source Serif 4\""
+                      ],
+                      "headline-lg": [
+                              "\"Source Serif 4\""
+                      ],
+                      "headline-md": [
+                              "\"Source Serif 4\""
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "\"Source Serif 4\""
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background h-full font-body-md text-body-md antialiased overflow-x-hidden flex flex-col">
+<!-- Progress Indicator (Thin bar at the very top) -->
+<div class="w-full h-1 bg-surface-variant fixed top-0 left-0 z-[60]">
+<div class="h-full bg-primary" style="width: 40%;"></div>
+</div>
+<!-- TopNavBar (Transactional/Gameplay intent - no main nav links) -->
+<nav class="flex justify-between items-center px-gutter h-16 bg-surface dark:bg-surface-variant border-b-4 border-primary-container shadow-sm fixed top-0 w-full z-50 transition-all pt-1">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md text-on-surface">SBK QUIZ ANALYZER</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm hidden md:inline-block border-l border-outline-variant pl-4 ml-2">Advanced Classical Mechanics</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="text-primary font-label-sm text-label-sm font-semibold tracking-wider">
+                SCORE: 850
+            </div>
+<div class="flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">timer</span>
+<span class="font-body-md text-body-md font-bold tabular-nums text-primary" id="quiz-timer">00:15:00</span>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-grow pt-24 pb-stack-lg px-margin-mobile md:px-gutter max-w-container-max mx-auto w-full flex flex-col items-center justify-center">
+<!-- Status & Context -->
+<div class="w-full max-w-3xl mb-stack-md flex justify-between items-end">
+<div>
+<div class="font-label-sm text-label-sm text-secondary mb-1">MODULE 4</div>
+<h1 class="font-headline-lg text-headline-lg text-on-background">Question 4 of 10</h1>
+</div>
+<div class="flex gap-2">
+<span class="inline-flex items-center justify-center bg-secondary-container text-on-secondary-container font-label-sm text-label-sm px-2 py-1 rounded">
+                     Multiple Choice
+                 </span>
+</div>
+</div>
+<!-- Question Card -->
+<div class="w-full max-w-3xl bg-surface-container-lowest border border-outline-variant rounded-lg p-8 md:p-12 shadow-[0px_4px_20px_rgba(0,0,0,0.05)] mb-stack-lg relative overflow-hidden group">
+<p class="font-body-lg text-body-lg text-on-background leading-relaxed mb-8">
+                In a system of two interacting particles, if the net external force acting on the system is zero, which of the following quantities is strictly conserved regardless of the nature of the internal forces (conservative or non-conservative)?
+            </p>
+<!-- Options (Bento-style layout for options) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Option A -->
+<button class="relative w-full text-left p-6 border border-outline-variant rounded bg-surface hover:bg-surface-container-low focus:border-primary focus:ring-1 focus:ring-primary transition-colors flex items-start gap-4 group/btn" tabindex="0">
+<span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant font-label-sm text-label-sm group-hover/btn:bg-primary-container group-hover/btn:text-on-primary-container group-hover/btn:border-primary-container transition-colors">
+                        A
+                    </span>
+<span class="font-body-md text-body-md text-on-surface pt-1">
+                        Total Mechanical Energy
+                    </span>
+<!-- Keyboard Hint -->
+<span class="absolute top-2 right-2 text-outline font-label-sm text-label-sm opacity-50 md:opacity-100">[1]</span>
+</button>
+<!-- Option B -->
+<button class="relative w-full text-left p-6 border border-outline-variant rounded bg-surface hover:bg-surface-container-low focus:border-primary focus:ring-1 focus:ring-primary transition-colors flex items-start gap-4 group/btn" tabindex="0">
+<span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant font-label-sm text-label-sm group-hover/btn:bg-primary-container group-hover/btn:text-on-primary-container group-hover/btn:border-primary-container transition-colors">
+                        B
+                    </span>
+<span class="font-body-md text-body-md text-on-surface pt-1">
+                        Total Linear Momentum
+                    </span>
+<span class="absolute top-2 right-2 text-outline font-label-sm text-label-sm opacity-50 md:opacity-100">[2]</span>
+</button>
+<!-- Option C -->
+<button class="relative w-full text-left p-6 border border-outline-variant rounded bg-surface hover:bg-surface-container-low focus:border-primary focus:ring-1 focus:ring-primary transition-colors flex items-start gap-4 group/btn" tabindex="0">
+<span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant font-label-sm text-label-sm group-hover/btn:bg-primary-container group-hover/btn:text-on-primary-container group-hover/btn:border-primary-container transition-colors">
+                        C
+                    </span>
+<span class="font-body-md text-body-md text-on-surface pt-1">
+                        Total Kinetic Energy
+                    </span>
+<span class="absolute top-2 right-2 text-outline font-label-sm text-label-sm opacity-50 md:opacity-100">[3]</span>
+</button>
+<!-- Option D -->
+<button class="relative w-full text-left p-6 border border-outline-variant rounded bg-surface hover:bg-surface-container-low focus:border-primary focus:ring-1 focus:ring-primary transition-colors flex items-start gap-4 group/btn" tabindex="0">
+<span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant font-label-sm text-label-sm group-hover/btn:bg-primary-container group-hover/btn:text-on-primary-container group-hover/btn:border-primary-container transition-colors">
+                        D
+                    </span>
+<span class="font-body-md text-body-md text-on-surface pt-1">
+                        Angular Momentum about any arbitrary point
+                    </span>
+<span class="absolute top-2 right-2 text-outline font-label-sm text-label-sm opacity-50 md:opacity-100">[4]</span>
+</button>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="w-full max-w-3xl flex justify-between items-center">
+<button class="px-6 py-3 border border-outline-variant text-secondary font-label-sm text-label-sm rounded hover:bg-surface-container-low transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                PREVIOUS
+             </button>
+<button class="px-8 py-3 bg-primary-container text-white font-label-sm text-label-sm font-semibold rounded hover:bg-primary transition-colors flex items-center gap-2 shadow-sm">
+                NEXT QUESTION
+                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</main>
+<script>
+        // Simple timer logic for demonstration
+        let timeRemaining = 15 * 60; // 15 minutes
+        const timerDisplay = document.getElementById('quiz-timer');
+
+        setInterval(() => {
+            if (timeRemaining > 0) {
+                timeRemaining--;
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                timerDisplay.textContent = `00:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+    </script>
+</body></html>

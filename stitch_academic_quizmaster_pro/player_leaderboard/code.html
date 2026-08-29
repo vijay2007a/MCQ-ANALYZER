@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SBK QUIZ ANALYZER - Leaderboard</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-background": "#1a1c1c",
+                      "inverse-on-surface": "#f1f0f0",
+                      "surface-dim": "#dadad9",
+                      "background": "#faf9f8",
+                      "error": "#ba1a1a",
+                      "surface-container-lowest": "#ffffff",
+                      "outline": "#737686",
+                      "primary-container": "#2563eb",
+                      "on-primary-fixed-variant": "#003ea8",
+                      "tertiary": "#943700",
+                      "inverse-primary": "#b4c5ff",
+                      "secondary-fixed": "#dde2f3",
+                      "on-tertiary-fixed": "#360f00",
+                      "surface-container-highest": "#e3e2e1",
+                      "on-primary-container": "#eeefff",
+                      "tertiary-fixed": "#ffdbcd",
+                      "surface-variant": "#e3e2e1",
+                      "secondary": "#585e6c",
+                      "surface-container-high": "#e9e8e7",
+                      "surface-tint": "#0053db",
+                      "outline-variant": "#c3c6d7",
+                      "surface-container-low": "#f4f3f2",
+                      "on-surface": "#1a1c1c",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "surface-bright": "#faf9f8",
+                      "on-tertiary-fixed-variant": "#7d2d00",
+                      "on-primary-fixed": "#00174b",
+                      "on-error": "#ffffff",
+                      "on-secondary-container": "#5e6473",
+                      "inverse-surface": "#2f3130",
+                      "on-secondary-fixed-variant": "#414754",
+                      "primary-fixed": "#dbe1ff",
+                      "on-tertiary": "#ffffff",
+                      "surface": "#faf9f8",
+                      "on-surface-variant": "#434655",
+                      "tertiary-container": "#bc4800",
+                      "error-container": "#ffdad6",
+                      "surface-container": "#eeeeed",
+                      "on-tertiary-container": "#ffede6",
+                      "tertiary-fixed-dim": "#ffb596",
+                      "secondary-fixed-dim": "#c1c6d7",
+                      "on-error-container": "#93000a",
+                      "secondary-container": "#dde2f3",
+                      "on-secondary-fixed": "#161c27",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "primary": "#004ac6"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "margin-mobile": "16px",
+                      "unit": "4px",
+                      "stack-md": "24px",
+                      "stack-lg": "40px",
+                      "container-max": "1140px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": [
+                              "\"Source Serif 4\""
+                      ],
+                      "headline-lg": [
+                              "\"Source Serif 4\""
+                      ],
+                      "headline-md": [
+                              "\"Source Serif 4\""
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "\"Source Serif 4\""
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .table-row-hover:hover {
+            background-color: theme('colors.surface-container-low');
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-body-md text-body-md bg-background text-on-background">
+<!-- TopNavBar (Shared Component) -->
+<nav class="bg-surface dark:bg-surface-variant font-body-md text-body-md docked full-width top-0 border-b border-outline-variant flat no shadows">
+<div class="flex justify-between items-center px-gutter py-4 w-full max-w-container-max mx-auto">
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">
+                SBK QUIZ ANALYZER
+            </div>
+<div class="flex gap-6">
+<a class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer transition-opacity active:opacity-80" href="#">
+                    Quizzes
+                </a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 hover:text-primary transition-colors cursor-pointer transition-opacity active:opacity-80" href="#">
+                    Leaderboard
+                </a>
+<a class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer transition-opacity active:opacity-80" href="#">
+                    Admin Portal
+                </a>
+</div>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow w-full max-w-container-max mx-auto px-margin-mobile md:px-gutter py-stack-lg">
+<!-- Header Section -->
+<header class="mb-stack-lg flex flex-col md:flex-row justify-between items-end gap-4 border-b border-outline-variant pb-6">
+<div>
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Leaderboard</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-2">Global rankings for 'Advanced Algorithm Design'.</p>
+</div>
+<!-- Filters / Actions (Simulated) -->
+<div class="flex gap-4 w-full md:w-auto">
+<div class="relative w-full md:w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border-b-2 border-outline focus:border-primary focus:ring-0 focus:outline-none transition-colors font-body-md text-body-md rounded-t-DEFAULT" placeholder="Search players..." type="text"/>
+</div>
+<button class="px-4 py-2 bg-surface border border-outline-variant rounded-DEFAULT font-label-sm text-label-sm flex items-center gap-2 hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined" style="font-size: 18px;">filter_list</span>
+                    Filter
+                </button>
+</div>
+</header>
+<!-- Leaderboard Data Container -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-6 md:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+<!-- Empty State (Hidden by default for this example, but structurally present) -->
+<!-- 
+            <div class="flex flex-col items-center justify-center py-20 text-center">
+                <span class="material-symbols-outlined text-6xl text-outline mb-4">leaderboard</span>
+                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">No leaderboard data yet.</h3>
+                <p class="font-body-md text-body-md text-on-surface-variant">Complete a quiz to appear here.</p>
+            </div> 
+            -->
+<!-- Data Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[600px]">
+<thead>
+<tr class="border-b border-outline-variant">
+<th class="py-4 px-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider w-16">Rank</th>
+<th class="py-4 px-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Player</th>
+<th class="py-4 px-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Score</th>
+<th class="py-4 px-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Accuracy</th>
+<th class="py-4 px-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Time</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md">
+<!-- Top 3 Players -->
+<tr class="border-b border-surface-variant table-row-hover transition-colors">
+<td class="py-4 px-4">
+<div class="w-8 h-8 rounded-full bg-surface-tint text-on-primary flex items-center justify-center font-bold">1</div>
+</td>
+<td class="py-4 px-4 font-semibold text-on-surface">Eleanor Vance</td>
+<td class="py-4 px-4 text-right font-semibold text-primary">9,850</td>
+<td class="py-4 px-4 text-right">98.5%</td>
+<td class="py-4 px-4 text-right tabular-nums text-on-surface-variant">14m 22s</td>
+</tr>
+<tr class="border-b border-surface-variant table-row-hover transition-colors">
+<td class="py-4 px-4">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface flex items-center justify-center font-bold">2</div>
+</td>
+<td class="py-4 px-4 font-semibold text-on-surface">Theodora Crain</td>
+<td class="py-4 px-4 text-right font-semibold text-on-surface">9,420</td>
+<td class="py-4 px-4 text-right">94.2%</td>
+<td class="py-4 px-4 text-right tabular-nums text-on-surface-variant">15m 05s</td>
+</tr>
+<tr class="border-b border-surface-variant table-row-hover transition-colors">
+<td class="py-4 px-4">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface flex items-center justify-center font-bold">3</div>
+</td>
+<td class="py-4 px-4 font-semibold text-on-surface">Luke Crain</td>
+<td class="py-4 px-4 text-right font-semibold text-on-surface">9,100</td>
+<td class="py-4 px-4 text-right">91.0%</td>
+<td class="py-4 px-4 text-right tabular-nums text-on-surface-variant">16m 40s</td>
+</tr>
+<!-- Gap / Ellipsis if needed -->
+<tr>
+<td class="py-2 text-center text-outline" colspan="5">
+<span class="material-symbols-outlined" style="font-size: 20px;">more_vert</span>
+</td>
+</tr>
+<!-- Current Player Highlight (Simulated Rank 42) -->
+<tr class="border-y-2 border-primary bg-primary-container/5 relative">
+<!-- Indicator line -->
+<td class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></td>
+<td class="py-4 px-4 font-bold text-on-surface">42</td>
+<td class="py-4 px-4 font-semibold text-on-surface flex items-center gap-2">
+                                You
+                                <span class="px-2 py-0.5 bg-primary text-on-primary text-[10px] rounded-full uppercase tracking-wider">Current</span>
+</td>
+<td class="py-4 px-4 text-right font-bold text-primary">7,250</td>
+<td class="py-4 px-4 text-right font-semibold">72.5%</td>
+<td class="py-4 px-4 text-right tabular-nums text-on-surface-variant font-semibold">22m 10s</td>
+</tr>
+<!-- Gap / Ellipsis if needed -->
+<tr>
+<td class="py-2 text-center text-outline" colspan="5">
+<span class="material-symbols-outlined" style="font-size: 20px;">more_vert</span>
+</td>
+</tr>
+<!-- Other Players -->
+<tr class="border-b border-surface-variant table-row-hover transition-colors">
+<td class="py-4 px-4 text-on-surface-variant">43</td>
+<td class="py-4 px-4 text-on-surface">Shirley Jackson</td>
+<td class="py-4 px-4 text-right text-on-surface">7,200</td>
+<td class="py-4 px-4 text-right">72.0%</td>
+<td class="py-4 px-4 text-right tabular-nums text-on-surface-variant">22m 45s</td>
+</tr>
+<tr class="table-row-hover transition-colors">
+<td class="py-4 px-4 text-on-surface-variant">44</td>
+<td class="py-4 px-4 text-on-surface">Arthur Dudley</td>
+<td class="py-4 px-4 text-right text-on-surface">7,150</td>
+<td class="py-4 px-4 text-right">71.5%</td>
+<td class="py-4 px-4 text-right tabular-nums text-on-surface-variant">23m 12s</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="mt-8 flex items-center justify-between border-t border-outline-variant pt-4">
+<span class="font-body-md text-body-md text-on-surface-variant">Showing 1-50 of 245 players</span>
+<div class="flex gap-2">
+<button class="p-2 border border-outline-variant rounded-DEFAULT text-on-surface hover:bg-surface-container-low transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="p-2 border border-outline-variant rounded-DEFAULT text-on-surface hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer (Shared Component) -->
+<footer class="bg-surface-container-lowest dark:bg-inverse-surface w-full py-8 mt-stack-lg border-t border-outline-variant flat no shadows">
+<div class="flex flex-col md:flex-row justify-between items-center px-gutter max-w-container-max mx-auto gap-4">
+<div class="font-label-sm text-label-sm text-secondary dark:text-secondary-fixed">
+                © 2024 SBK Institute
+            </div>
+<div class="flex gap-6 font-label-sm text-label-sm">
+<a class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer" href="#">
+                    About
+                </a>
+<a class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer" href="#">
+                    Privacy
+                </a>
+<a class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer" href="#">
+                    Terms
+                </a>
+<a class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer" href="#">
+                    Admin Portal
+                </a>
+</div>
+</div>
+</footer>
+</body></html>

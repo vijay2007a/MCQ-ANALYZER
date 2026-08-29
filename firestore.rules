@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // SBK QUIZ ANALYZER — SECURITY & PROCTORING RULES
+    // ==========================================
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.email.matches('.*@.*')
+      );
+    }
+
+    // 1. Proctoring & Anti-Cheat Monitoring Events
+    match /monitoring_events/{eventId} {
+      // Students taking an active quiz can append their own proctoring events
+      allow create: if request.resource.data.student_name is string
+                    && request.resource.data.session_id != null
+                    && request.resource.data.event_type is string
+                    && request.resource.data.quiz_id != null;
+
+      // Only authenticated administrators can read, query, or list monitoring events
+      allow read, list: if isAuthenticated();
+
+      // Audit logs are strictly immutable: no client updates or deletions allowed
+      allow update, delete: if false;
+    }
+
+    // 2. Quiz Attempts Real-Time Tracking
+    match /quiz_attempts/{attemptId} {
+      // Students can create their attempt record
+      allow create: if request.resource.data.student_name is string
+                    && request.resource.data.quiz_id != null;
+
+      // Students can update their own attempt; Admins can read/update all
+      allow read, list: if isAuthenticated();
+      allow update: if request.resource.data.session_id != null;
+      allow delete: if isAdmin();
+
+      // Attempt subcollection events
+      match /events/{subEventId} {
+        allow create: if request.resource.data.event_type is string;
+        allow read, list: if isAuthenticated();
+        allow update, delete: if false;
+      }
+    }
+
+    // 3. Administrative Settings & Secure Audit Logs
+    match /admin/{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // 4. Quizzes & Question Subcollections
+    match /quizzes/{quizId} {
+      // Public / Students can read published quizzes
+      allow read: if true;
+      // Only authenticated administrators can create, update, or permanently delete quizzes
+      allow write, delete: if isAdmin();
+
+      // Subcollections (questions, configurations, generated content)
+      match /questions/{questionId} {
+        allow read: if true;
+        allow write, delete: if isAdmin();
+      }
+
+      match /{subCollection=**} {
+        allow read: if true;
+        allow write, delete: if isAdmin();
+      }
+    }
+
+    // 5. Default Deny for any unlisted collections
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

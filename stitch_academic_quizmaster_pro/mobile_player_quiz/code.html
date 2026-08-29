@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SBK QUIZ ANALYZER - Mobile Player Quiz</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=Source+Serif+4:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#1a1c1c",
+                        "inverse-on-surface": "#f1f0f0",
+                        "surface-dim": "#dadad9",
+                        "background": "#faf9f8",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#737686",
+                        "primary-container": "#2563eb",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "tertiary": "#943700",
+                        "inverse-primary": "#b4c5ff",
+                        "secondary-fixed": "#dde2f3",
+                        "on-tertiary-fixed": "#360f00",
+                        "surface-container-highest": "#e3e2e1",
+                        "on-primary-container": "#eeefff",
+                        "tertiary-fixed": "#ffdbcd",
+                        "surface-variant": "#e3e2e1",
+                        "secondary": "#585e6c",
+                        "surface-container-high": "#e9e8e7",
+                        "surface-tint": "#0053db",
+                        "outline-variant": "#c3c6d7",
+                        "surface-container-low": "#f4f3f2",
+                        "on-surface": "#1a1c1c",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-bright": "#faf9f8",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "on-primary-fixed": "#00174b",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#5e6473",
+                        "inverse-surface": "#2f3130",
+                        "on-secondary-fixed-variant": "#414754",
+                        "primary-fixed": "#dbe1ff",
+                        "on-tertiary": "#ffffff",
+                        "surface": "#faf9f8",
+                        "on-surface-variant": "#434655",
+                        "tertiary-container": "#bc4800",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eeeeed",
+                        "on-tertiary-container": "#ffede6",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "secondary-fixed-dim": "#c1c6d7",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#dde2f3",
+                        "on-secondary-fixed": "#161c27",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "primary": "#004ac6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "margin-mobile": "16px",
+                        "unit": "4px",
+                        "stack-md": "24px",
+                        "stack-lg": "40px",
+                        "container-max": "1140px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["\"Source Serif 4\""],
+                        "headline-lg": ["\"Source Serif 4\""],
+                        "headline-md": ["\"Source Serif 4\""],
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["\"Source Serif 4\""]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-icon { font-variation-settings: 'FILL' 1; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col pt-16">
+<!-- Progress Indicator (Top) -->
+<div class="fixed top-0 left-0 w-full h-1 bg-surface-container z-[60]">
+<div class="h-full bg-primary" style="width: 45%;"></div>
+</div>
+<!-- TopNavBar (Semantic match for "00:15:00" Timer) -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-white border-b-4 border-primary-container shadow-sm transition-all text-primary font-body-md text-body-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-body-md text-body-md font-bold text-on-surface">Psychology 101</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-body-md text-body-md font-bold tabular-nums">00:15:00</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm">Score: 850</span>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col px-margin-mobile py-stack-md mx-auto w-full max-w-container-max">
+<!-- Context / Meta -->
+<div class="flex justify-between items-center mb-4">
+<span class="font-label-sm text-label-sm text-secondary bg-surface-container px-2 py-1 rounded">Question 9 of 20</span>
+<span class="font-label-sm text-label-sm text-tertiary bg-tertiary-fixed px-2 py-1 rounded">Multiple Choice</span>
+</div>
+<!-- Question Card -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-lg p-6 mb-stack-md shadow-[0px_4px_20px_rgba(0,0,0,0.05)]">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-4">According to classical conditioning, what is the term for a stimulus that elicits a response only after learning has taken place?</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Consider Pavlov's experiments with dogs to contextualize the relationship between the bell and the salivation response.</p>
+</article>
+<!-- Answer Options (Vertically Stacked) -->
+<div class="flex flex-col gap-3 w-full">
+<button class="w-full text-left bg-surface border border-outline-variant rounded-lg p-4 font-body-md text-body-md text-on-surface hover:bg-surface-container-low transition-colors focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-50">
+<span class="font-bold mr-2">A.</span> Unconditioned Stimulus
+            </button>
+<button class="w-full text-left bg-surface border border-outline-variant rounded-lg p-4 font-body-md text-body-md text-on-surface hover:bg-surface-container-low transition-colors focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-50">
+<span class="font-bold mr-2">B.</span> Conditioned Stimulus
+            </button>
+<button class="w-full text-left bg-surface border border-outline-variant rounded-lg p-4 font-body-md text-body-md text-on-surface hover:bg-surface-container-low transition-colors focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-50">
+<span class="font-bold mr-2">C.</span> Unconditioned Response
+            </button>
+<button class="w-full text-left bg-surface border border-outline-variant rounded-lg p-4 font-body-md text-body-md text-on-surface hover:bg-surface-container-low transition-colors focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary focus:ring-opacity-50">
+<span class="font-bold mr-2">D.</span> Conditioned Response
+            </button>
+</div>
+<!-- Action Area -->
+<div class="mt-stack-lg flex gap-4 w-full justify-between pb-8">
+<button class="flex items-center justify-center bg-transparent border border-outline-variant text-on-surface rounded font-label-sm text-label-sm px-6 py-3 min-h-[48px] focus:outline-none">
+<span class="material-symbols-outlined mr-2">flag</span> Flag
+            </button>
+<button class="flex-grow flex items-center justify-center bg-primary text-on-primary rounded font-label-sm text-label-sm px-6 py-3 min-h-[48px] focus:outline-none">
+                Next <span class="material-symbols-outlined ml-2">arrow_forward</span>
+</button>
+</div>
+</main>
+</body></html>
