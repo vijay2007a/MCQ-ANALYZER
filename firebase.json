@@ -1,4 +1,18 @@
 {
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "SBK Quiz Analyzer",
+        "supportEmail": "admin@sbkquiz.edu",
+        "authorizedRedirectUris": [
+          "https://mcq-analyzer-16a47.firebaseapp.com/__/auth/handler",
+          "http://localhost:8000",
+          "http://127.0.0.1:8000"
+        ]
+      }
+    }
+  },
   "firestore": {
     "rules": "firestore.rules"
   },

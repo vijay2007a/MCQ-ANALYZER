@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Tuple, Dict, Any
+import random
+from typing import Optional, Tuple, Dict, Any, List
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.models.quiz import Quiz
@@ -29,10 +30,82 @@ def ensure_utc(dt: datetime) -> datetime:
 
 class SessionService:
     @staticmethod
+    def _build_player_question(
+        quiz: Quiz,
+        session: QuizSession,
+        slot_number: int,
+        all_questions_by_order: Dict[int, Question],
+    ) -> Optional[QuestionPlayerResponse]:
+        total_questions = len(all_questions_by_order)
+        if slot_number < 1 or slot_number > total_questions:
+            return None
+
+        order_map = session.question_order_map or list(range(1, total_questions + 1))
+        actual_order = order_map[slot_number - 1] if (slot_number - 1) < len(order_map) else slot_number
+        q = all_questions_by_order.get(actual_order)
+        if not q:
+            return None
+
+        raw_opts = {
+            "A": q.option_a,
+            "B": q.option_b,
+            "C": q.option_c,
+            "D": q.option_d,
+        }
+
+        opt_map_all = session.option_order_map or {}
+        slot_opt_map = opt_map_all.get(str(slot_number))
+        if slot_opt_map and isinstance(slot_opt_map, dict):
+            display_opts = {
+                disp_k: raw_opts.get(orig_k, "")
+                for disp_k, orig_k in slot_opt_map.items()
+            }
+        else:
+            display_opts = raw_opts
+
+        return QuestionPlayerResponse(
+            question_number=slot_number,
+            total_questions=total_questions,
+            question_text=q.question_text,
+            options=display_opts,
+            time_per_question=quiz.time_per_question,
+        )
+
+    @staticmethod
+    def get_all_session_questions(db: Session, session: QuizSession) -> List[QuestionPlayerResponse]:
+        quiz = session.quiz
+        questions = db.query(Question).filter(Question.quiz_id == session.quiz_id).order_by(Question.question_order.asc()).all()
+        by_order = {q.question_order: q for q in questions}
+        result_list: List[QuestionPlayerResponse] = []
+        for slot in range(1, len(questions) + 1):
+            qp = SessionService._build_player_question(quiz, session, slot, by_order)
+            if qp:
+                result_list.append(qp)
+        return result_list
+
+    @staticmethod
+    def get_saved_answers_map(db: Session, session: QuizSession) -> Dict[int, str]:
+        attempts = db.query(QuizAttempt).filter(QuizAttempt.session_id == session.id).all()
+        opt_map_all = session.option_order_map or {}
+        saved: Dict[int, str] = {}
+        for a in attempts:
+            slot = a.question_order
+            slot_opt_map = opt_map_all.get(str(slot))
+            if slot_opt_map and isinstance(slot_opt_map, dict):
+                # Map canonical DB option back to display option for this session
+                inv_map = {orig_k: disp_k for disp_k, orig_k in slot_opt_map.items()}
+                saved[slot] = inv_map.get(a.submitted_option, a.submitted_option)
+            else:
+                saved[slot] = a.submitted_option
+        return saved
+
+    @staticmethod
     def start_quiz_session(
         db: Session,
         quiz_id: int,
         player_name: str,
+        register_number: Optional[str] = None,
+        access_code: Optional[str] = None,
         client_ip: Optional[str] = None,
         user_agent: Optional[str] = None,
     ) -> Tuple[QuizSession, str, Optional[QuestionPlayerResponse]]:
@@ -56,6 +129,22 @@ class SessionService:
             )
             raise ValueError("Quiz not found or is not currently published")
 
+        # Validate access code if quiz has one configured
+        if quiz.access_code and quiz.access_code.strip():
+            provided_code = (access_code or "").strip().upper()
+            if provided_code != quiz.access_code.strip().upper():
+                audit_service.log_event(
+                    db,
+                    event_type="INVALID_ACCESS_CODE",
+                    actor_type="PLAYER",
+                    actor_id=player_name,
+                    ip_address=client_ip,
+                    user_agent=user_agent,
+                    resource_type="QUIZ",
+                    resource_id=str(quiz_id),
+                )
+                raise ValueError("Invalid quiz access code. Please check with your instructor.")
+
         total_questions = len(quiz.questions)
         if total_questions == 0:
             raise ValueError("Quiz has no questions available")
@@ -64,18 +153,26 @@ class SessionService:
         if not clean_name:
             raise ValueError("Player name cannot be empty")
 
-        # Check maximum attempts restriction
+        clean_reg = register_number.strip().upper() if register_number and register_number.strip() else None
+
+        # Check maximum attempts restriction (by register_number if provided, or player_name)
         if quiz.maximum_attempts > 0:
-            existing_attempts = db.query(QuizSession).filter(
-                QuizSession.quiz_id == quiz_id,
-                QuizSession.player_name.ilike(clean_name),
-            ).count()
+            if clean_reg:
+                existing_attempts = db.query(QuizSession).filter(
+                    QuizSession.quiz_id == quiz_id,
+                    (QuizSession.register_number.ilike(clean_reg)) | (QuizSession.player_name.ilike(clean_name)),
+                ).count()
+            else:
+                existing_attempts = db.query(QuizSession).filter(
+                    QuizSession.quiz_id == quiz_id,
+                    QuizSession.player_name.ilike(clean_name),
+                ).count()
             if existing_attempts >= quiz.maximum_attempts:
                 audit_service.log_event(
                     db,
                     event_type="MAX_ATTEMPTS_EXCEEDED",
                     actor_type="PLAYER",
-                    actor_id=clean_name,
+                    actor_id=clean_reg or clean_name,
                     ip_address=client_ip,
                     user_agent=user_agent,
                     resource_type="QUIZ",
@@ -83,19 +180,34 @@ class SessionService:
                     details={"attempt_count": existing_attempts, "max_allowed": quiz.maximum_attempts},
                 )
                 raise ValueError(
-                    f"Maximum attempt limit ({quiz.maximum_attempts}) reached for player '{clean_name}' on this quiz"
+                    f"Maximum attempt limit ({quiz.maximum_attempts}) reached for '{clean_reg or clean_name}' on this quiz"
                 )
+
+        # Build question_order_map and option_order_map for randomization
+        base_orders = list(range(1, total_questions + 1))
+        if getattr(quiz, "randomize_questions", False):
+            random.shuffle(base_orders)
+
+        option_map: Dict[str, Dict[str, str]] = {}
+        if getattr(quiz, "randomize_options", False):
+            letters = ["A", "B", "C", "D"]
+            for slot in range(1, total_questions + 1):
+                shuffled = letters[:]
+                random.shuffle(shuffled)
+                option_map[str(slot)] = {letters[i]: shuffled[i] for i in range(4)}
 
         raw_token = generate_player_session_token()
         token_hash = hash_session_token(raw_token)
 
         now = utc_now()
         # Allocate total quiz time plus 5-minute network buffer
-        calculated_seconds = (quiz.time_per_question * total_questions) + 300
+        duration_sec = getattr(quiz, "duration_minutes", 0) * 60 if getattr(quiz, "duration_minutes", 0) else 0
+        calculated_seconds = max(duration_sec, (quiz.time_per_question * total_questions)) + 300
         expires_at = now + timedelta(seconds=max(calculated_seconds, settings.SESSION_EXPIRE_MINUTES * 60))
 
         session = QuizSession(
             player_name=clean_name,
+            register_number=clean_reg,
             session_token_hash=token_hash,
             quiz_id=quiz.id,
             started_at=now,
@@ -103,6 +215,10 @@ class SessionService:
             current_question_order=1,
             current_question_started_at=now,
             status="ACTIVE",
+            question_order_map=base_orders,
+            option_order_map=option_map if option_map else None,
+            marked_for_review=[],
+            warnings_count=0,
             created_at=now,
             last_activity_at=now,
         )
@@ -119,29 +235,12 @@ class SessionService:
             user_agent=user_agent,
             resource_type="SESSION",
             resource_id=str(session.id),
-            details={"quiz_id": quiz.id, "player_name": clean_name},
+            details={"quiz_id": quiz.id, "player_name": clean_name, "register_number": clean_reg},
         )
 
-        # Retrieve sanitized first question
-        first_q = db.query(Question).filter(
-            Question.quiz_id == quiz_id,
-            Question.question_order == 1,
-        ).first()
-
-        first_q_response = None
-        if first_q:
-            first_q_response = QuestionPlayerResponse(
-                question_number=1,
-                total_questions=total_questions,
-                question_text=first_q.question_text,
-                options={
-                    "A": first_q.option_a,
-                    "B": first_q.option_b,
-                    "C": first_q.option_c,
-                    "D": first_q.option_d,
-                },
-                time_per_question=quiz.time_per_question,
-            )
+        questions = db.query(Question).filter(Question.quiz_id == quiz_id).all()
+        by_order = {q.question_order: q for q in questions}
+        first_q_response = SessionService._build_player_question(quiz, session, 1, by_order)
 
         return session, raw_token, first_q_response
 
@@ -169,27 +268,211 @@ class SessionService:
         if session.current_question_order > total_questions:
             return None
 
-        question = db.query(Question).filter(
-            Question.quiz_id == session.quiz_id,
-            Question.question_order == session.current_question_order,
-        ).first()
+        questions = db.query(Question).filter(Question.quiz_id == session.quiz_id).all()
+        by_order = {q.question_order: q for q in questions}
+        return SessionService._build_player_question(session.quiz, session, session.current_question_order, by_order)
 
-        if not question:
-            return None
+    @staticmethod
+    def _resolve_actual_question_and_option(
+        db: Session,
+        session: QuizSession,
+        slot_order: int,
+        display_option: Optional[str],
+    ) -> Tuple[Optional[Question], str]:
+        questions = db.query(Question).filter(Question.quiz_id == session.quiz_id).all()
+        by_order = {q.question_order: q for q in questions}
+        total_questions = len(questions)
+        order_map = session.question_order_map or list(range(1, total_questions + 1))
+        actual_order = order_map[slot_order - 1] if 1 <= slot_order <= len(order_map) else slot_order
+        question = by_order.get(actual_order)
 
-        # Sanitize: NEVER return correct_option or explanation
-        return QuestionPlayerResponse(
-            question_number=question.question_order,
-            total_questions=total_questions,
-            question_text=question.question_text,
-            options={
-                "A": question.option_a,
-                "B": question.option_b,
-                "C": question.option_c,
-                "D": question.option_d,
-            },
-            time_per_question=session.quiz.time_per_question,
+        canonical_opt = (display_option or "A").upper()
+        opt_map_all = session.option_order_map or {}
+        slot_opt_map = opt_map_all.get(str(slot_order))
+        if slot_opt_map and isinstance(slot_opt_map, dict) and display_option:
+            canonical_opt = slot_opt_map.get(display_option.upper(), display_option.upper())
+
+        return question, canonical_opt
+
+    @staticmethod
+    def save_draft_answer(
+        db: Session,
+        session: QuizSession,
+        question_order: int,
+        selected_option: Optional[str] = None,
+        marked_for_review: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        now = utc_now()
+        if session.status != "ACTIVE":
+            raise ValueError(f"Session is not active (status: {session.status})")
+
+        if ensure_utc(now) > ensure_utc(session.expires_at):
+            session.status = "EXPIRED"
+            result_service.create_result_from_session(db, session)
+            db.commit()
+            raise ValueError("Session has expired")
+
+        total_questions = len(session.quiz.questions)
+        if question_order < 1 or question_order > total_questions:
+            raise ValueError(f"Question #{question_order} is out of bounds")
+
+        # Update marked_for_review list if provided
+        review_list = list(session.marked_for_review or [])
+        if marked_for_review is not None:
+            if marked_for_review and question_order not in review_list:
+                review_list.append(question_order)
+            elif not marked_for_review and question_order in review_list:
+                review_list.remove(question_order)
+            session.marked_for_review = sorted(review_list)
+
+        # Save or update answer in QuizAttempt
+        if selected_option:
+            question, canonical_opt = SessionService._resolve_actual_question_and_option(
+                db, session, question_order, selected_option
+            )
+            if not question:
+                raise ValueError(f"Question #{question_order} not found")
+
+            elapsed_delta = ensure_utc(now) - ensure_utc(session.current_question_started_at)
+            response_time_ms = max(100, int(elapsed_delta.total_seconds() * 1000))
+            is_correct = (canonical_opt.upper() == question.correct_option.upper())
+            points_earned = scoring_service.calculate_points(
+                is_correct=is_correct,
+                response_time_ms=response_time_ms,
+                scoring_config=session.quiz.scoring_config,
+            )
+
+            existing = db.query(QuizAttempt).filter(
+                QuizAttempt.session_id == session.id,
+                QuizAttempt.question_id == question.id,
+            ).first()
+
+            if existing:
+                existing.submitted_option = canonical_opt.upper()
+                existing.is_correct = is_correct
+                existing.response_time_ms = response_time_ms
+                existing.points_earned = points_earned
+                existing.submitted_at = now
+            else:
+                attempt = QuizAttempt(
+                    session_id=session.id,
+                    question_id=question.id,
+                    question_order=question_order,
+                    submitted_option=canonical_opt.upper(),
+                    is_correct=is_correct,
+                    response_time_ms=response_time_ms,
+                    points_earned=points_earned,
+                    submitted_at=now,
+                    idempotency_key=f"draft_{session.id}_q{question_order}",
+                )
+                db.add(attempt)
+
+        session.current_question_order = question_order
+        session.current_question_started_at = now
+        session.last_activity_at = now
+        db.commit()
+        db.refresh(session)
+
+        return {
+            "status": "SAVED",
+            "question_order": question_order,
+            "selected_option": selected_option,
+            "marked_for_review": session.marked_for_review or [],
+            "saved_answers": SessionService.get_saved_answers_map(db, session),
+            "saved_at": now,
+        }
+
+    @staticmethod
+    def finish_quiz_session(
+        db: Session,
+        session: QuizSession,
+        answers: Optional[Dict[str, str]] = None,
+        marked_for_review: Optional[List[int]] = None,
+        reason: str = "MANUAL_SUBMIT",
+        client_ip: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ):
+        now = utc_now()
+        if session.status == "COMPLETED":
+            res, rank = result_service.get_player_result_with_rank(db, session.id)
+            return res, rank
+
+        if marked_for_review is not None:
+            session.marked_for_review = marked_for_review
+
+        # Persist any answers included in the final batch payload
+        if answers and isinstance(answers, dict):
+            total_questions = len(session.quiz.questions)
+            elapsed_total_ms = max(500, int((ensure_utc(now) - ensure_utc(session.started_at)).total_seconds() * 1000))
+            per_q_time_ms = max(100, elapsed_total_ms // max(1, len(answers)))
+
+            for slot_str, disp_opt in answers.items():
+                try:
+                    slot_order = int(slot_str)
+                except ValueError:
+                    continue
+                if slot_order < 1 or slot_order > total_questions:
+                    continue
+                if not disp_opt or str(disp_opt).upper() not in ["A", "B", "C", "D"]:
+                    continue
+
+                question, canonical_opt = SessionService._resolve_actual_question_and_option(
+                    db, session, slot_order, str(disp_opt).upper()
+                )
+                if not question:
+                    continue
+
+                is_correct = (canonical_opt.upper() == question.correct_option.upper())
+                points_earned = scoring_service.calculate_points(
+                    is_correct=is_correct,
+                    response_time_ms=per_q_time_ms,
+                    scoring_config=session.quiz.scoring_config,
+                )
+
+                existing = db.query(QuizAttempt).filter(
+                    QuizAttempt.session_id == session.id,
+                    QuizAttempt.question_id == question.id,
+                ).first()
+
+                if existing:
+                    existing.submitted_option = canonical_opt.upper()
+                    existing.is_correct = is_correct
+                    existing.points_earned = points_earned
+                    existing.submitted_at = now
+                else:
+                    db.add(
+                        QuizAttempt(
+                            session_id=session.id,
+                            question_id=question.id,
+                            question_order=slot_order,
+                            submitted_option=canonical_opt.upper(),
+                            is_correct=is_correct,
+                            response_time_ms=per_q_time_ms,
+                            points_earned=points_earned,
+                            submitted_at=now,
+                            idempotency_key=f"final_{session.id}_q{slot_order}",
+                        )
+                    )
+
+        session.status = "COMPLETED"
+        session.last_activity_at = now
+        db.flush()
+
+        result = result_service.create_result_from_session(db, session)
+        audit_service.log_event(
+            db,
+            event_type="QUIZ_COMPLETED",
+            actor_type="PLAYER",
+            actor_id=str(session.id),
+            ip_address=client_ip,
+            user_agent=user_agent,
+            resource_type="SESSION",
+            resource_id=str(session.id),
+            details={"quiz_id": session.quiz_id, "player_name": session.player_name, "reason": reason},
         )
+        db.commit()
+        _, rank = result_service.get_player_result_with_rank(db, session.id)
+        return result, rank
 
     @staticmethod
     def submit_answer(

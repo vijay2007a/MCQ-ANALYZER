@@ -89,16 +89,22 @@ class ExportService:
 
         results_headers = [
             "Rank",
-            "Player Name",
-            "Quiz",
-            "Score",
-            "Correct Answers",
-            "Incorrect Answers",
+            "Student Name",
+            "Register Number",
+            "Quiz Name",
             "Total Questions",
+            "Correct Answers",
+            "Wrong Answers",
+            "Unanswered Questions",
+            "Marks Obtained",
+            "Percentage",
+            "Completion Time",
+            "Submission Time",
+            "Quiz Status",
+            "Recorded Warnings",
+            "Player Name",
+            "Score",
             "Accuracy (%)",
-            "Total Time (s)",
-            "Avg Response Time (ms)",
-            "Completed At (UTC)",
         ]
 
         ws_results.append(results_headers)
@@ -118,19 +124,45 @@ class ExportService:
             ).all()
         )
 
-        for rank, r in enumerate(sorted_results, start=1):
+        last_key = None
+        current_rank = 1
+        for idx, r in enumerate(sorted_results, start=1):
+            key = (r.total_score, r.total_time_ms)
+            if last_key is not None and key == last_key:
+                rank = current_rank
+            else:
+                rank = idx
+                current_rank = idx
+            last_key = key
+
+            unans = getattr(r, "unanswered_questions", 0) or 0
+            wrong_only = max(0, r.incorrect_answers - unans)
+            marks_obt = getattr(r, "marks_obtained", r.correct_answers)
+            if marks_obt is None or (marks_obt == 0 and r.correct_answers > 0):
+                marks_obt = r.correct_answers
+            warnings_cnt = getattr(r, "warnings_count", 0) or 0
+            if warnings_cnt == 0 and r.session:
+                warnings_cnt = getattr(r.session, "warnings_count", 0) or 0
+            q_status = getattr(r, "quiz_status", None) or (r.session.status if r.session else "COMPLETED")
+
             row_data = [
                 rank,
                 r.player_name,
+                getattr(r, "register_number", None) or (r.session.register_number if r.session else "-") or "-",
                 r.quiz.title if r.quiz else f"Quiz #{r.quiz_id}",
-                r.total_score,
-                r.correct_answers,
-                r.incorrect_answers,
                 r.total_questions,
+                r.correct_answers,
+                wrong_only,
+                unans,
+                marks_obt,
                 r.accuracy,
-                round(r.total_time_ms / 1000.0, 2),
-                r.average_response_time_ms,
+                f"{round(r.total_time_ms / 1000.0, 2)}s",
                 r.completed_at.strftime("%Y-%m-%d %H:%M:%S") if r.completed_at else "",
+                q_status,
+                warnings_cnt,
+                r.player_name,
+                r.total_score,
+                r.accuracy,
             ]
             ws_results.append(row_data)
             current_row = ws_results.max_row
@@ -138,7 +170,7 @@ class ExportService:
                 c = ws_results.cell(row=current_row, column=col_idx)
                 c.font = data_font
                 c.border = cell_border
-                if col_idx in [1, 4, 5, 6, 7, 8, 9, 10]:
+                if col_idx in [1, 5, 6, 7, 8, 9, 10, 14, 16, 17]:
                     c.alignment = Alignment(horizontal="right")
                 else:
                     c.alignment = Alignment(horizontal="left")

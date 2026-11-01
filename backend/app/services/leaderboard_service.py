@@ -50,14 +50,29 @@ class LeaderboardService:
         )
 
         entries = []
+        last_key = None
+        current_rank = skip + 1
         for idx, r in enumerate(results, start=skip + 1):
+            key = (r.total_score, r.total_time_ms)
+            if last_key is not None and key == last_key:
+                rank_val = current_rank
+            else:
+                rank_val = idx
+                current_rank = idx
+            last_key = key
+
             entries.append(
                 LeaderboardEntry(
-                    rank=idx,
+                    rank=rank_val,
                     player_name=r.player_name,
+                    register_number=getattr(r, "register_number", None),
                     quiz_id=r.quiz_id,
                     quiz_title=r.quiz.title if r.quiz else "Unknown Quiz",
                     total_score=r.total_score,
+                    marks_obtained=getattr(r, "marks_obtained", r.correct_answers) or r.correct_answers,
+                    total_marks=getattr(r, "total_marks", r.total_questions) or r.total_questions,
+                    correct_answers=r.correct_answers,
+                    total_questions=r.total_questions,
                     accuracy=r.accuracy,
                     total_time_ms=r.total_time_ms,
                     completed_at=r.completed_at,

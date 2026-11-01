@@ -8,15 +8,22 @@ class PlayerResultResponse(BaseModel):
 
     session_id: int
     player_name: str
+    register_number: Optional[str] = None
     quiz_id: int
     quiz_title: str
     total_score: int
+    marks_obtained: int = 0
+    total_marks: int = 0
     correct_answers: int
     incorrect_answers: int
+    unanswered_questions: int = 0
     total_questions: int
     accuracy: float
     total_time_ms: int
     average_response_time_ms: int
+    warnings_count: int = 0
+    quiz_status: str = "COMPLETED"
+    results_published: bool = True
     completed_at: datetime
     rank: Optional[int] = None
 
@@ -27,16 +34,23 @@ class AdminResultResponse(BaseModel):
     id: int
     session_id: int
     player_name: str
+    register_number: Optional[str] = None
     quiz_id: int
     quiz_title: str
     total_score: int
+    marks_obtained: int = 0
+    total_marks: int = 0
     correct_answers: int
     incorrect_answers: int
+    unanswered_questions: int = 0
     total_questions: int
     accuracy: float
     total_time_ms: int
     average_response_time_ms: int
+    warnings_count: int = 0
+    quiz_status: str = "COMPLETED"
     completed_at: datetime
+    rank: Optional[int] = None
 
 
 class AdminResultsListResponse(BaseModel):

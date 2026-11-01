@@ -37,6 +37,13 @@ class QuizCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     difficulty: str = Field(default="MEDIUM")
     time_per_question: int = Field(default=30, ge=5, le=300)
+    duration_minutes: int = Field(default=15, ge=1, le=300)
+    marks_per_question: int = Field(default=1, ge=1, le=100)
+    negative_marks: int = Field(default=0, ge=0, le=100)
+    access_code: Optional[str] = Field(default=None, max_length=50)
+    randomize_questions: bool = Field(default=False)
+    randomize_options: bool = Field(default=False)
+    results_published: bool = Field(default=True)
     maximum_attempts: int = Field(default=0, ge=0, le=100)  # 0 for unlimited
     scoring_config: Optional[ScoringConfigSchema] = None
 
@@ -49,6 +56,14 @@ class QuizCreate(BaseModel):
     @classmethod
     def sanitize_description(cls, v: Optional[str]) -> Optional[str]:
         return html.escape(v.strip()) if v else v
+
+    @field_validator("access_code")
+    @classmethod
+    def sanitize_access_code(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        cleaned = v.strip().upper()
+        return html.escape(cleaned) if cleaned else None
 
     @field_validator("difficulty")
     @classmethod
@@ -66,6 +81,13 @@ class QuizUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     difficulty: Optional[str] = None
     time_per_question: Optional[int] = Field(None, ge=5, le=300)
+    duration_minutes: Optional[int] = Field(None, ge=1, le=300)
+    marks_per_question: Optional[int] = Field(None, ge=1, le=100)
+    negative_marks: Optional[int] = Field(None, ge=0, le=100)
+    access_code: Optional[str] = Field(None, max_length=50)
+    randomize_questions: Optional[bool] = None
+    randomize_options: Optional[bool] = None
+    results_published: Optional[bool] = None
     maximum_attempts: Optional[int] = Field(None, ge=0, le=100)
     scoring_config: Optional[ScoringConfigSchema] = None
 
@@ -78,6 +100,14 @@ class QuizUpdate(BaseModel):
     @classmethod
     def sanitize_description(cls, v: Optional[str]) -> Optional[str]:
         return html.escape(v.strip()) if v is not None else v
+
+    @field_validator("access_code")
+    @classmethod
+    def sanitize_access_code(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        cleaned = v.strip().upper()
+        return html.escape(cleaned) if cleaned else None
 
     @field_validator("difficulty")
     @classmethod
@@ -99,10 +129,18 @@ class QuizAdminResponse(BaseModel):
     difficulty: str
     status: str
     time_per_question: int
+    duration_minutes: int = 15
+    marks_per_question: int = 1
+    negative_marks: int = 0
+    access_code: Optional[str] = None
+    randomize_questions: bool = False
+    randomize_options: bool = False
+    results_published: bool = True
     maximum_attempts: int
     scoring_config: Optional[Dict[str, Any]]
     created_by: Optional[int]
     question_count: int = 0
+    participant_count: int = 0
     created_at: datetime
     updated_at: datetime
     published_at: Optional[datetime] = None
@@ -116,6 +154,11 @@ class QuizPublicResponse(BaseModel):
     description: Optional[str]
     difficulty: str
     time_per_question: int
+    duration_minutes: int = 15
+    marks_per_question: int = 1
+    negative_marks: int = 0
+    requires_access_code: bool = False
+    results_published: bool = True
     total_questions: int
 
 
@@ -153,6 +196,13 @@ class QuizImportDocxRequest(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     difficulty: str = Field(default="MEDIUM")
     time_per_question: int = Field(default=30, ge=5, le=300)
+    duration_minutes: int = Field(default=15, ge=1, le=300)
+    marks_per_question: int = Field(default=1, ge=1, le=100)
+    negative_marks: int = Field(default=0, ge=0, le=100)
+    access_code: Optional[str] = Field(default=None, max_length=50)
+    randomize_questions: bool = Field(default=False)
+    randomize_options: bool = Field(default=False)
+    results_published: bool = Field(default=True)
     maximum_attempts: int = Field(default=0, ge=0, le=100)
     publish_immediately: bool = Field(default=False)
     questions: List[DocxParsedQuestionSchema]

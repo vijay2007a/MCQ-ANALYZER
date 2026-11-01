@@ -13,10 +13,10 @@ class DocxParserService:
 
     # Regex patterns for line matching
     QUIZ_TITLE_PATTERN = re.compile(r"^(?:QUIZ\s*TITLE|TITLE|QUIZ\s*NAME)\s*[:\-]\s*(.+)$", re.IGNORECASE)
-    QUESTION_START_PATTERN = re.compile(r"^(?:Q\s*(\d+)[\.:\)\-]|Question\s*(\d+)[\.:\)\-]|(\d+)[\.:\)])\s*(.*)$", re.IGNORECASE)
-    OPTION_PATTERN = re.compile(r"^([A-D])[\.:\)\-]\s*(.*)$", re.IGNORECASE)
-    ANSWER_PATTERN = re.compile(r"^(?:ANSWER|ANS|CORRECT\s*ANSWER|CORRECT)\s*[:\-]\s*([A-D])", re.IGNORECASE)
-    EXPLANATION_PATTERN = re.compile(r"^(?:EXPLANATION|EXPLAIN|REASON|EXP)\s*[:\-]\s*(.*)$", re.IGNORECASE)
+    QUESTION_START_PATTERN = re.compile(r"^(?:Q\s*(\d+)[\.:\)\-]?|Question\s*(\d+)[\.:\)\-]?|\((\d+)\)|(\d+)[\.:\)\-])\s*(.*)$", re.IGNORECASE)
+    OPTION_PATTERN = re.compile(r"^(?:\(([A-D])\)|([A-D])[\.:\)\-])\s*(.*)$", re.IGNORECASE)
+    ANSWER_PATTERN = re.compile(r"^(?:ANSWER|ANS|CORRECT\s*ANSWER|CORRECT\s*OPTION|CORRECT)\s*[:\-]\s*(?:OPTION\s*)?\(?([A-D])\)?(?:[\.:\)\-\s].*)?$", re.IGNORECASE)
+    EXPLANATION_PATTERN = re.compile(r"^(?:EXPLANATION|EXPLAIN|REASON|EXP|SOLUTION)\s*[:\-]\s*(.*)$", re.IGNORECASE)
 
     def parse_docx_bytes(self, file_bytes: bytes, fallback_title: str = "Imported Quiz") -> Dict[str, Any]:
         """
@@ -127,23 +127,23 @@ class DocxParserService:
             # Check question start
             q_match = self.QUESTION_START_PATTERN.match(line)
             if q_match and not question_text_parts:
-                extracted_num = q_match.group(1) or q_match.group(2) or q_match.group(3)
+                extracted_num = q_match.group(1) or q_match.group(2) or q_match.group(3) or q_match.group(4)
                 if extracted_num:
                     try:
                         question_num = int(extracted_num)
                     except ValueError:
                         pass
-                initial_text = q_match.group(4).strip()
+                initial_text = q_match.group(5).strip()
                 if initial_text:
                     question_text_parts.append(initial_text)
                 current_mode = "QUESTION"
                 continue
 
-            # Check Option: A., B., C., D.
+            # Check Option: A., B., C., D. or (A), (B)
             opt_match = self.OPTION_PATTERN.match(line)
             if opt_match:
-                opt_letter = opt_match.group(1).upper()
-                opt_val = opt_match.group(2).strip()
+                opt_letter = (opt_match.group(1) or opt_match.group(2)).upper()
+                opt_val = opt_match.group(3).strip()
                 options[opt_letter] = opt_val
                 current_option = opt_letter
                 current_mode = "OPTION"

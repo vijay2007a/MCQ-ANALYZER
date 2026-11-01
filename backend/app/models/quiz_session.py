@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, DateTime, ForeignKey
+from typing import Optional, Dict, Any, List
+from sqlalchemy import String, Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
@@ -13,6 +14,7 @@ class QuizSession(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     player_name: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
+    register_number: Mapped[Optional[str]] = mapped_column(String(50), index=True, nullable=True)
     session_token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     quiz_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("quizzes.id", ondelete="CASCADE"), nullable=False, index=True
@@ -26,6 +28,10 @@ class QuizSession(Base):
     status: Mapped[str] = mapped_column(
         String(50), default="ACTIVE", index=True, nullable=False
     )  # ACTIVE, COMPLETED, EXPIRED, ABANDONED
+    question_order_map: Mapped[Optional[List[int]]] = mapped_column(JSON, nullable=True)
+    option_order_map: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    marked_for_review: Mapped[Optional[List[int]]] = mapped_column(JSON, nullable=True)
+    warnings_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     last_activity_at: Mapped[datetime] = mapped_column(

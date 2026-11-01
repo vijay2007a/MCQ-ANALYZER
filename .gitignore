@@ -51,8 +51,18 @@ venv.bak/
 # IDE & OS files
 .idea/
 .vscode/
+.kilo/
 *.swp
 *.swo
 *~
 .DS_Store
 Thumbs.db
+
+# Firebase & Local Debug Logs
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.db-journal
+*.db-wal
+*.db-shm

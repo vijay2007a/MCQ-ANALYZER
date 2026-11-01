@@ -30,12 +30,91 @@ logger = logging.getLogger("sbk_quiz.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: ensure tables exist in dev/sqlite
+    # Startup: ensure tables exist in dev/sqlite and apply safe additive column migrations
     Base.metadata.create_all(bind=engine)
+    _run_safe_column_migrations(engine)
+    _ensure_default_admins()
     logger.info("SBK Quiz Analyzer backend successfully started.")
     yield
     # Shutdown logic if needed
     logger.info("SBK Quiz Analyzer backend shutting down.")
+
+
+def _ensure_default_admins():
+    """Ensure the primary admin account (vijay2007a@gmail.com / 12345678) exists and is active."""
+    from app.core.database import SessionLocal
+    from app.models.admin import Admin
+    from app.core.security import hash_password, verify_password
+    db = SessionLocal()
+    try:
+        target_email = "vijay2007a@gmail.com"
+        target_pass = "12345678"
+        admin = db.query(Admin).filter(Admin.email == target_email).first()
+        if not admin:
+            admin = Admin(
+                email=target_email,
+                password_hash=hash_password(target_pass),
+                role="ADMIN",
+                is_active=True,
+            )
+            db.add(admin)
+            db.commit()
+        else:
+            updated = False
+            if not verify_password(target_pass, admin.password_hash):
+                admin.password_hash = hash_password(target_pass)
+                updated = True
+            if not admin.is_active:
+                admin.is_active = True
+                updated = True
+            if updated:
+                db.commit()
+    except Exception as e:
+        logger.warning(f"Default admin provisioning notice: {e}")
+    finally:
+        db.close()
+
+
+def _run_safe_column_migrations(eng):
+    """Safely adds any newly introduced columns to existing SQLite/PostgreSQL databases without data loss."""
+    from sqlalchemy import inspect, text
+    try:
+        inspector = inspect(eng)
+        migrations = {
+            "quizzes": [
+                ("duration_minutes", "INTEGER DEFAULT 15 NOT NULL"),
+                ("marks_per_question", "INTEGER DEFAULT 1 NOT NULL"),
+                ("negative_marks", "INTEGER DEFAULT 0 NOT NULL"),
+                ("access_code", "VARCHAR(50)"),
+                ("randomize_questions", "BOOLEAN DEFAULT 0 NOT NULL"),
+                ("randomize_options", "BOOLEAN DEFAULT 0 NOT NULL"),
+                ("results_published", "BOOLEAN DEFAULT 1 NOT NULL"),
+            ],
+            "quiz_sessions": [
+                ("register_number", "VARCHAR(50)"),
+                ("question_order_map", "JSON"),
+                ("option_order_map", "JSON"),
+                ("marked_for_review", "JSON"),
+                ("warnings_count", "INTEGER DEFAULT 0 NOT NULL"),
+            ],
+            "quiz_results": [
+                ("register_number", "VARCHAR(50)"),
+                ("marks_obtained", "INTEGER DEFAULT 0 NOT NULL"),
+                ("total_marks", "INTEGER DEFAULT 0 NOT NULL"),
+                ("unanswered_questions", "INTEGER DEFAULT 0 NOT NULL"),
+                ("warnings_count", "INTEGER DEFAULT 0 NOT NULL"),
+                ("quiz_status", "VARCHAR(50) DEFAULT 'COMPLETED' NOT NULL"),
+            ],
+        }
+        with eng.begin() as conn:
+            for table_name, cols in migrations.items():
+                if inspector.has_table(table_name):
+                    existing_cols = {c["name"] for c in inspector.get_columns(table_name)}
+                    for col_name, col_def in cols:
+                        if col_name not in existing_cols:
+                            conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def}"))
+    except Exception as e:
+        logger.warning(f"Safe column migration notice: {e}")
 
 
 app = FastAPI(

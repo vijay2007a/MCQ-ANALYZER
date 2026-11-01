@@ -27,25 +27,43 @@ class ResultService:
         total_score = sum(a.points_earned for a in attempts)
         correct_count = sum(1 for a in attempts if a.is_correct)
         incorrect_count = sum(1 for a in attempts if not a.is_correct)
-        # Unanswered questions in expired sessions count as incorrect
         unanswered_count = max(0, total_questions - len(attempts))
-        incorrect_count += unanswered_count
+
+        marks_per_q = getattr(session.quiz, "marks_per_question", 1) or 1
+        neg_marks = getattr(session.quiz, "negative_marks", 0) or 0
+        marks_obtained = max(0, (correct_count * marks_per_q) - (incorrect_count * neg_marks))
+        total_marks = total_questions * marks_per_q
+
+        # For backwards compatibility, incorrect_answers on result includes unanswered if needed by legacy tests,
+        # while unanswered_questions tracks exact unanswered count.
+        legacy_incorrect_count = incorrect_count + unanswered_count
 
         total_time_ms = sum(a.response_time_ms for a in attempts)
+        if total_time_ms == 0 and session.started_at:
+            now_dt = datetime.now(timezone.utc)
+            st_dt = session.started_at if session.started_at.tzinfo else session.started_at.replace(tzinfo=timezone.utc)
+            total_time_ms = max(100, int((now_dt - st_dt).total_seconds() * 1000))
+
         avg_response_time_ms = int(total_time_ms / len(attempts)) if attempts else 0
         accuracy = round((correct_count / total_questions * 100.0), 2) if total_questions > 0 else 0.0
 
         result = QuizResult(
             session_id=session.id,
             player_name=session.player_name,
+            register_number=getattr(session, "register_number", None),
             quiz_id=session.quiz_id,
             total_score=total_score,
+            marks_obtained=marks_obtained,
+            total_marks=total_marks,
             correct_answers=correct_count,
-            incorrect_answers=incorrect_count,
+            incorrect_answers=legacy_incorrect_count,
+            unanswered_questions=unanswered_count,
             total_questions=total_questions,
             accuracy=accuracy,
             total_time_ms=total_time_ms,
             average_response_time_ms=avg_response_time_ms,
+            warnings_count=getattr(session, "warnings_count", 0) or 0,
+            quiz_status=session.status if session.status in ["COMPLETED", "EXPIRED"] else "COMPLETED",
             completed_at=datetime.now(timezone.utc),
         )
         db.add(result)

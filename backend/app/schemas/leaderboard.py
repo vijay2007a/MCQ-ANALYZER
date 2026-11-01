@@ -8,9 +8,14 @@ class LeaderboardEntry(BaseModel):
 
     rank: int
     player_name: str
+    register_number: Optional[str] = None
     quiz_id: int
     quiz_title: str
     total_score: int
+    marks_obtained: int = 0
+    total_marks: int = 0
+    correct_answers: int = 0
+    total_questions: int = 0
     accuracy: float
     total_time_ms: int
     completed_at: datetime

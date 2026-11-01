@@ -2,83 +2,469 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ==========================================
-    // SBK QUIZ ANALYZER — SECURITY & PROCTORING RULES
-    // ==========================================
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // This security rules file assumes the following data structures:
+    //
+    // 1. Collection: quizzes/{quizId}
+    //    Fields:
+    //      - title: string (required, 1..300 chars) - quiz title
+    //      - description: string (optional, 0..2000 chars) - quiz description
+    //      - difficulty: string (optional, enum: EASY, MEDIUM, HARD, EXPERT)
+    //      - status: string (optional, enum: DRAFT, PUBLISHED, UNPUBLISHED, ARCHIVED)
+    //      - time_per_question: number (optional, 5..3600)
+    //      - duration_minutes: number (optional, 1..300)
+    //      - marks_per_question: number (optional, 1..1000)
+    //      - access_code: string (optional, 0..32 chars)
+    //      - results_published: bool (optional)
+    //      - randomize_questions: bool (optional)
+    //      - randomize_options: bool (optional)
+    //      - created_at: number | timestamp | string (optional, immutable)
+    //
+    // 2. Collection: questions/{questionId} (and quizzes/{quizId}/questions/{questionId})
+    //    Fields:
+    //      - question_text: string (required, 1..2000 chars)
+    //      - option_a: string (optional, 1..500 chars)
+    //      - option_b: string (optional, 1..500 chars)
+    //      - option_c: string (optional, 1..500 chars)
+    //      - option_d: string (optional, 1..500 chars)
+    //      - correct_option: string (optional, enum: A, B, C, D)
+    //      - explanation: string (optional, 0..2000 chars)
+    //      - question_order: number (optional, 1..1000)
+    //
+    // 3. Collection: quiz_sessions/{sessionId} & quiz_attempts/{attemptId}
+    //    Fields:
+    //      - uid: string (required, 1..128 chars, immutable on update)
+    //      - student_name: string (required, 1..200 chars, immutable on update)
+    //      - quiz_id: number | string (required, non-null, immutable on update)
+    //      - session_id: number | string (optional, 1..128 chars)
+    //      - register_number: string (optional, 0..64 chars)
+    //      - total_questions: number (optional, 0..1000)
+    //      - status: string (optional, enum: ACTIVE, IN_PROGRESS, COMPLETED, SUBMITTED, EXPIRED, ABANDONED)
+    //      - saved_answers: map (optional, max 200 keys)
+    //      - marked_for_review: list (optional, max 200 items)
+    //      - warnings_count: number (optional, 0..10000)
+    //      - created_at: number | timestamp | string (optional, immutable on update)
+    //
+    // 4. Collection: quiz_results/{resultId}
+    //    Fields:
+    //      - player_name: string (required, 1..200 chars, immutable)
+    //      - quiz_id: number | string (required, non-null, immutable)
+    //      - quiz_title: string (optional, 0..300 chars)
+    //      - register_number: string (optional, 0..64 chars)
+    //      - total_score: number (optional, 0..1000000)
+    //      - marks_obtained: number (optional, 0..100000)
+    //      - total_marks: number (optional, 0..100000)
+    //      - accuracy: number (optional, 0..100)
+    //      - total_time_ms: number (optional, 0..86400000)
+    //      - completed_at: number | timestamp | string (optional, immutable)
+    //
+    // 5. Collection: monitoring_events/{eventId}
+    //    Fields:
+    //      - student_name: string (required, 1..200 chars, immutable)
+    //      - event_type: string (required, 1..100 chars, immutable)
+    //      - quiz_id: number | string (required, non-null, immutable)
+    //      - session_id: number | string (optional, immutable)
+    //      - quiz_title: string (optional, 0..300 chars, immutable)
+    //      - question_number: number (optional, 0..1000, immutable)
+    //      - timestamp: string (optional, 0..100 chars, immutable)
+    //      - created_at: number | timestamp | string (optional, immutable)
+    //      - details: map (optional, max 20 keys, immutable)
+    //
+    // 6. Collection: users/{userId} & admins/{adminId}
+    //    Fields:
+    //      - uid: string (optional, must match userId/adminId, immutable)
+    //      - email: string (optional, valid email format, <= 254 chars)
+    //      - name: string (optional, 1..150 chars)
+    //      - photoURL: string (optional, 0..2000 chars)
+    //      - role: string (optional, immutable for non-admins)
+    //      - lastLoginAt: number | timestamp | string (optional)
+    //      - created_at: number | timestamp | string (optional, immutable)
+    //
+    // ===============================================================
 
-    // Helper functions
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Check if the user is authenticated via Firebase Auth
     function isAuthenticated() {
       return request.auth != null;
     }
 
+    // Check if the authenticated user is a faculty/admin user via server-set custom claim
     function isAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.admin == true ||
-        request.auth.token.email.matches('.*@.*')
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    // Check if user owns the resource based on path parameter
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if user is owner based on document's uid field
+    function isDocOwner() {
+      return isAuthenticated() && ('uid' in resource.data) && request.auth.uid == resource.data.uid;
+    }
+
+    // Verify UID hasn't been tampered with on create
+    function uidUnchanged(expectedUid) {
+      return !('uid' in request.resource.data) ||
+        request.resource.data.uid == expectedUid;
+    }
+
+    // Ensure uid field is not modified on update
+    function uidNotModified() {
+      return !('uid' in request.resource.data) ||
+        !('uid' in resource.data) ||
+        request.resource.data.uid == resource.data.uid;
+    }
+
+    // Validate required fields exist
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // Validate that the document contains only the allowed fields
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // Validate that immutable fields have not been modified during an update
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // Validate string length on request.resource.data
+    function validStringLength(field, minLen, maxLen) {
+      return (field in request.resource.data) &&
+        request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    // Validate optional string (if present and non-null, must be string within length bounds)
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+        request.resource.data[field] == null ||
+        (request.resource.data[field] is string &&
+         request.resource.data[field].size() >= minLen &&
+         request.resource.data[field].size() <= maxLen);
+    }
+
+    // Validate optional number within range
+    function isValidOptionalNumber(field, minVal, maxVal) {
+      return !(field in request.resource.data) ||
+        request.resource.data[field] == null ||
+        (request.resource.data[field] is number &&
+         request.resource.data[field] >= minVal &&
+         request.resource.data[field] <= maxVal);
+    }
+
+    // Validate optional boolean
+    function isValidOptionalBool(field) {
+      return !(field in request.resource.data) ||
+        request.resource.data[field] == null ||
+        request.resource.data[field] is bool;
+    }
+
+    // Validate identifier (can be int/number or bounded non-empty string)
+    function isValidIdValue(val) {
+      return val != null && (
+        (val is number && val >= 0) ||
+        (val is string && val.size() >= 1 && val.size() <= 128)
       );
     }
 
-    // 1. Proctoring & Anti-Cheat Monitoring Events
-    match /monitoring_events/{eventId} {
-      // Students taking an active quiz can append their own proctoring events
-      allow create: if request.resource.data.student_name is string
-                    && request.resource.data.session_id != null
-                    && request.resource.data.event_type is string
-                    && request.resource.data.quiz_id != null;
-
-      // Only authenticated administrators can read, query, or list monitoring events
-      allow read, list: if isAuthenticated();
-
-      // Audit logs are strictly immutable: no client updates or deletions allowed
-      allow update, delete: if false;
+    // Validate optional timestamp / epoch ms / ISO string
+    function isValidOptionalTime(field) {
+      return !(field in request.resource.data) ||
+        request.resource.data[field] == null ||
+        request.resource.data[field] is timestamp ||
+        (request.resource.data[field] is number && request.resource.data[field] >= 0) ||
+        (request.resource.data[field] is string && request.resource.data[field].size() <= 64);
     }
 
-    // 2. Quiz Attempts Real-Time Tracking
-    match /quiz_attempts/{attemptId} {
-      // Students can create their attempt record
-      allow create: if request.resource.data.student_name is string
-                    && request.resource.data.quiz_id != null;
+    // Validate email format
+    function isValidEmail(email) {
+      return email is string &&
+        email.size() >= 3 &&
+        email.size() <= 254 &&
+        email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+    }
 
-      // Students can update their own attempt; Admins can read/update all
-      allow read, list: if isAuthenticated();
-      allow update: if request.resource.data.session_id != null;
+    // Validate list size bound
+    function isValidList(listVal, maxSize) {
+      return listVal is list && listVal.size() <= maxSize;
+    }
+
+    // ===============================================================
+    // Domain Validators (Used in BOTH create and update rules)
+    // ===============================================================
+
+    function isValidQuiz(data) {
+      return data.size() <= 25 &&
+        (!('title' in data) || (data.title is string && data.title.size() >= 1 && data.title.size() <= 300)) &&
+        isValidOptionalString('description', 0, 2000) &&
+        (!('difficulty' in data) || data.difficulty in ['EASY', 'MEDIUM', 'HARD', 'EXPERT']) &&
+        (!('status' in data) || data.status in ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED']) &&
+        isValidOptionalNumber('time_per_question', 1, 3600) &&
+        isValidOptionalNumber('duration_minutes', 1, 300) &&
+        isValidOptionalNumber('marks_per_question', 1, 1000) &&
+        isValidOptionalString('access_code', 0, 32) &&
+        isValidOptionalBool('results_published') &&
+        isValidOptionalBool('randomize_questions') &&
+        isValidOptionalBool('randomize_options') &&
+        isValidOptionalTime('created_at') &&
+        isValidOptionalTime('updated_at');
+    }
+
+    function isValidQuestion(data) {
+      return data.size() <= 20 &&
+        (!('question_text' in data) || (data.question_text is string && data.question_text.size() >= 1 && data.question_text.size() <= 2000)) &&
+        isValidOptionalString('option_a', 0, 500) &&
+        isValidOptionalString('option_b', 0, 500) &&
+        isValidOptionalString('option_c', 0, 500) &&
+        isValidOptionalString('option_d', 0, 500) &&
+        (!('correct_option' in data) || data.correct_option in ['A', 'B', 'C', 'D']) &&
+        isValidOptionalString('explanation', 0, 2000) &&
+        isValidOptionalNumber('question_order', 1, 1000);
+    }
+
+    function isValidSessionOrAttempt(data) {
+      return data.size() <= 25 &&
+        ('uid' in data) &&
+        data.uid is string &&
+        data.uid.size() >= 1 &&
+        data.uid.size() <= 128 &&
+        ('student_name' in data) &&
+        data.student_name is string &&
+        data.student_name.size() >= 1 &&
+        data.student_name.size() <= 200 &&
+        ('quiz_id' in data) &&
+        isValidIdValue(data.quiz_id) &&
+        (!('session_id' in data) || data.session_id == null || isValidIdValue(data.session_id)) &&
+        isValidOptionalString('register_number', 0, 64) &&
+        isValidOptionalString('quiz_title', 0, 300) &&
+        isValidOptionalNumber('total_questions', 0, 1000) &&
+        (!('status' in data) || data.status in ['ACTIVE', 'IN_PROGRESS', 'COMPLETED', 'SUBMITTED', 'EXPIRED', 'ABANDONED']) &&
+        (!('saved_answers' in data) || (data.saved_answers is map && data.saved_answers.size() <= 200)) &&
+        (!('marked_for_review' in data) || isValidList(data.marked_for_review, 200)) &&
+        isValidOptionalNumber('warnings_count', 0, 10000) &&
+        isValidOptionalNumber('score', 0, 1000000) &&
+        isValidOptionalTime('created_at') &&
+        isValidOptionalTime('updated_at');
+    }
+
+    function isValidQuizResult(data) {
+      return data.size() <= 25 &&
+        ('player_name' in data) &&
+        data.player_name is string &&
+        data.player_name.size() >= 1 &&
+        data.player_name.size() <= 200 &&
+        ('quiz_id' in data) &&
+        isValidIdValue(data.quiz_id) &&
+        isValidOptionalString('quiz_title', 0, 300) &&
+        isValidOptionalString('register_number', 0, 64) &&
+        isValidOptionalNumber('total_score', 0, 1000000) &&
+        isValidOptionalNumber('marks_obtained', 0, 100000) &&
+        isValidOptionalNumber('total_marks', 0, 100000) &&
+        isValidOptionalNumber('accuracy', 0, 100) &&
+        isValidOptionalNumber('total_time_ms', 0, 86400000) &&
+        isValidOptionalNumber('correct_answers', 0, 1000) &&
+        isValidOptionalNumber('incorrect_answers', 0, 1000) &&
+        isValidOptionalNumber('unanswered_questions', 0, 1000) &&
+        isValidOptionalNumber('warning_count', 0, 10000) &&
+        isValidOptionalBool('results_published') &&
+        isValidOptionalTime('completed_at') &&
+        isValidOptionalTime('created_at');
+    }
+
+    function isValidMonitoringEvent(data) {
+      return data.size() <= 15 &&
+        hasRequiredFields(['student_name', 'event_type', 'quiz_id']) &&
+        data.student_name is string &&
+        data.student_name.size() >= 1 &&
+        data.student_name.size() <= 200 &&
+        data.event_type is string &&
+        data.event_type.size() >= 1 &&
+        data.event_type.size() <= 100 &&
+        isValidIdValue(data.quiz_id) &&
+        (!('session_id' in data) || data.session_id == null || isValidIdValue(data.session_id)) &&
+        isValidOptionalString('quiz_title', 0, 300) &&
+        isValidOptionalString('register_number', 0, 64) &&
+        isValidOptionalNumber('question_number', 0, 1000) &&
+        isValidOptionalString('timestamp', 0, 100) &&
+        isValidOptionalTime('created_at') &&
+        (!('details' in data) || data.details == null || (data.details is map && data.details.size() <= 20));
+    }
+
+    function isValidUserProfile(data) {
+      return hasOnlyAllowedFields(['uid', 'name', 'displayName', 'email', 'photoURL', 'register_number', 'role', 'lastLoginAt', 'created_at', 'updated_at']) &&
+        isValidOptionalString('uid', 1, 128) &&
+        isValidOptionalString('name', 1, 150) &&
+        isValidOptionalString('displayName', 1, 150) &&
+        (!('email' in data) || data.email == null || isValidEmail(data.email)) &&
+        isValidOptionalString('photoURL', 0, 2000) &&
+        isValidOptionalString('register_number', 0, 64) &&
+        (!('role' in data) || data.role in ['student', 'user']) &&
+        isValidOptionalTime('lastLoginAt') &&
+        isValidOptionalTime('created_at') &&
+        isValidOptionalTime('updated_at');
+    }
+
+    function isValidAdminProfile(data) {
+      return hasOnlyAllowedFields(['uid', 'name', 'displayName', 'email', 'role', 'department', 'created_at', 'updated_at']) &&
+        isValidOptionalString('uid', 1, 128) &&
+        isValidOptionalString('name', 1, 150) &&
+        isValidOptionalString('displayName', 1, 150) &&
+        (!('email' in data) || data.email == null || isValidEmail(data.email)) &&
+        (!('role' in data) || data.role in ['admin', 'faculty']) &&
+        isValidOptionalString('department', 0, 150) &&
+        isValidOptionalTime('created_at') &&
+        isValidOptionalTime('updated_at');
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // 1. Quizzes & Subcollections
+    match /quizzes/{quizId} {
+      // Public/students can read published quizzes
+      allow read: if true;
+
+      // Authenticated faculty/admins can create, update, and delete quizzes
+      allow create: if isAdmin() && isValidQuiz(request.resource.data);
+      allow update: if isAdmin() && isValidQuiz(request.resource.data) && areImmutableFieldsUnchanged(['created_at']);
       allow delete: if isAdmin();
 
-      // Attempt subcollection events
+      // Quiz questions subcollection
+      match /questions/{questionId} {
+        allow read: if true;
+        allow create: if isAdmin() && isValidQuestion(request.resource.data);
+        allow update: if isAdmin() && isValidQuestion(request.resource.data);
+        allow delete: if isAdmin();
+      }
+
+      // Any other quiz configuration subcollections
+      match /{subCollection}/{docId} {
+        allow read: if true;
+        allow create, update: if isAdmin() && request.resource.data.size() <= 30;
+        allow delete: if isAdmin();
+      }
+    }
+
+    // 2. Top-Level Questions Collection
+    match /questions/{questionId} {
+      // Public/students can read questions
+      allow read: if true;
+
+      // Authenticated admins can create, update, and delete questions
+      allow create: if isAdmin() && isValidQuestion(request.resource.data);
+      allow update: if isAdmin() && isValidQuestion(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // 3. Quiz Sessions & Quiz Attempts (Real-Time Tracking & Autosave)
+    match /quiz_sessions/{sessionId} {
+      // Authenticated students/admins can create and update their own active quiz session
+      allow create: if (isAdmin() || (isAuthenticated() && request.resource.data.uid == request.auth.uid)) &&
+                    isValidSessionOrAttempt(request.resource.data);
+      allow update: if (isAdmin() || isDocOwner()) &&
+                    isValidSessionOrAttempt(request.resource.data) &&
+                    areImmutableFieldsUnchanged(['uid', 'quiz_id', 'student_name', 'created_at']);
+
+      // Only the owning student or an authenticated admin can read; admins can delete
+      allow read: if isAdmin() || isDocOwner();
+      allow delete: if isAdmin();
+    }
+
+    match /quiz_attempts/{attemptId} {
+      // Authenticated students/admins can create and update their own active quiz attempt
+      allow create: if (isAdmin() || (isAuthenticated() && request.resource.data.uid == request.auth.uid)) &&
+                    isValidSessionOrAttempt(request.resource.data);
+      allow update: if (isAdmin() || isDocOwner()) &&
+                    isValidSessionOrAttempt(request.resource.data) &&
+                    areImmutableFieldsUnchanged(['uid', 'quiz_id', 'student_name', 'created_at']);
+
+      // Only the owning student or an authenticated admin can read; admins can delete
+      allow read: if isAdmin() || isDocOwner();
+      allow delete: if isAdmin();
+
+      // Attempt subcollection telemetry events
       match /events/{subEventId} {
-        allow create: if request.resource.data.event_type is string;
-        allow read, list: if isAuthenticated();
+        allow create: if request.resource.data.size() <= 15 &&
+                      ('event_type' in request.resource.data) &&
+                      request.resource.data.event_type is string &&
+                      request.resource.data.event_type.size() >= 1 &&
+                      request.resource.data.event_type.size() <= 100;
+        allow read: if isAdmin();
         allow update, delete: if false;
       }
     }
 
-    // 3. Administrative Settings & Secure Audit Logs
-    match /admin/{document=**} {
-      allow read, write: if isAdmin();
+    // 4. Quiz Results & Leaderboard
+    match /quiz_results/{resultId} {
+      // Public read allowed only when register_number PII is absent/empty; owners and admins can always read
+      allow read: if isAdmin() ||
+                  isDocOwner() ||
+                  (!('register_number' in resource.data) || resource.data.register_number == null || resource.data.register_number == '');
+
+      // Result creation is reserved for the authoritative backend (Admin SDK bypasses rules)
+      allow create: if false;
+
+      // Only authenticated admins can update or delete results
+      allow update: if isAdmin() &&
+                    isValidQuizResult(request.resource.data) &&
+                    areImmutableFieldsUnchanged(['quiz_id', 'player_name', 'completed_at', 'created_at']);
+      allow delete: if isAdmin();
     }
 
-    // 4. Quizzes & Question Subcollections
-    match /quizzes/{quizId} {
-      // Public / Students can read published quizzes
-      allow read: if true;
-      // Only authenticated administrators can create, update, or permanently delete quizzes
-      allow write, delete: if isAdmin();
+    // 5. Proctoring & Anti-Cheat Monitoring Events
+    match /monitoring_events/{eventId} {
+      // Students taking an active quiz can create proctoring/anti-cheat telemetry events
+      allow create: if isValidMonitoringEvent(request.resource.data);
 
-      // Subcollections (questions, configurations, generated content)
-      match /questions/{questionId} {
-        allow read: if true;
-        allow write, delete: if isAdmin();
-      }
+      // Only authenticated admins can read or list monitoring events
+      allow read: if isAdmin();
 
-      match /{subCollection=**} {
-        allow read: if true;
-        allow write, delete: if isAdmin();
-      }
+      // Audit/monitoring events are strictly immutable
+      allow update, delete: if false;
     }
 
-    // 5. Default Deny for any unlisted collections
+    // 6. User & Admin Profiles (Strict PII Isolation & RBAC Protection)
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) &&
+                    isValidUserProfile(request.resource.data) &&
+                    uidUnchanged(userId);
+      allow update: if isOwner(userId) &&
+                    isValidUserProfile(request.resource.data) &&
+                    uidNotModified() &&
+                    areImmutableFieldsUnchanged(['uid', 'role', 'created_at']);
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read: if isOwner(adminId) || isAdmin();
+      allow create: if isOwner(adminId) &&
+                    isAdmin() &&
+                    isValidAdminProfile(request.resource.data) &&
+                    uidUnchanged(adminId);
+      allow update: if isOwner(adminId) &&
+                    isAdmin() &&
+                    isValidAdminProfile(request.resource.data) &&
+                    uidNotModified() &&
+                    areImmutableFieldsUnchanged(['uid', 'role', 'created_at']);
+      allow delete: if false;
+    }
+
+    // 7. Default Deny for all unlisted collections and documents
     match /{document=**} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if false;
     }
   }
 }

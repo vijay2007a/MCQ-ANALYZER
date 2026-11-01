@@ -25,6 +25,32 @@ from app.services.docx_parser_service import docx_parser_service
 router = APIRouter(prefix="/admin/quizzes", tags=["Admin Quizzes"])
 
 
+def _build_quiz_admin_response(q) -> QuizAdminResponse:
+    return QuizAdminResponse(
+        id=q.id,
+        title=q.title,
+        description=q.description,
+        difficulty=q.difficulty,
+        status=q.status,
+        time_per_question=q.time_per_question,
+        duration_minutes=getattr(q, "duration_minutes", 15) or 15,
+        marks_per_question=getattr(q, "marks_per_question", 1) or 1,
+        negative_marks=getattr(q, "negative_marks", 0) or 0,
+        access_code=getattr(q, "access_code", None),
+        randomize_questions=bool(getattr(q, "randomize_questions", False)),
+        randomize_options=bool(getattr(q, "randomize_options", False)),
+        results_published=bool(getattr(q, "results_published", True)),
+        maximum_attempts=q.maximum_attempts,
+        scoring_config=q.scoring_config,
+        created_by=q.created_by,
+        question_count=len(q.questions),
+        participant_count=len(q.results) if hasattr(q, "results") and q.results is not None else 0,
+        created_at=q.created_at,
+        updated_at=q.updated_at,
+        published_at=q.published_at,
+    )
+
+
 @router.get("", response_model=List[QuizAdminResponse])
 def list_admin_quizzes(
     status: Optional[str] = Query(None, description="Filter by status (DRAFT, PUBLISHED, etc.)"),
@@ -37,25 +63,7 @@ def list_admin_quizzes(
     List all quizzes with question count for admin dashboard.
     """
     quizzes, _ = quiz_service.get_quizzes(db, skip=skip, limit=limit, status=status)
-    responses = []
-    for q in quizzes:
-        resp = QuizAdminResponse(
-            id=q.id,
-            title=q.title,
-            description=q.description,
-            difficulty=q.difficulty,
-            status=q.status,
-            time_per_question=q.time_per_question,
-            maximum_attempts=q.maximum_attempts,
-            scoring_config=q.scoring_config,
-            created_by=q.created_by,
-            question_count=len(q.questions),
-            created_at=q.created_at,
-            updated_at=q.updated_at,
-            published_at=q.published_at,
-        )
-        responses.append(resp)
-    return responses
+    return [_build_quiz_admin_response(q) for q in quizzes]
 
 
 @router.post("", response_model=QuizAdminResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(rate_limit("quiz_create", max_requests=30, window_seconds=60))])
@@ -68,21 +76,7 @@ def create_quiz(
     Create a new quiz draft.
     """
     quiz = quiz_service.create_quiz(db, quiz_in=quiz_in, admin_id=current_admin.id)
-    return QuizAdminResponse(
-        id=quiz.id,
-        title=quiz.title,
-        description=quiz.description,
-        difficulty=quiz.difficulty,
-        status=quiz.status,
-        time_per_question=quiz.time_per_question,
-        maximum_attempts=quiz.maximum_attempts,
-        scoring_config=quiz.scoring_config,
-        created_by=quiz.created_by,
-        question_count=0,
-        created_at=quiz.created_at,
-        updated_at=quiz.updated_at,
-        published_at=quiz.published_at,
-    )
+    return _build_quiz_admin_response(quiz)
 
 
 @router.get("/{quiz_id}", response_model=QuizAdminResponse)
@@ -98,21 +92,7 @@ def get_quiz_detail(
     if not quiz:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
 
-    return QuizAdminResponse(
-        id=quiz.id,
-        title=quiz.title,
-        description=quiz.description,
-        difficulty=quiz.difficulty,
-        status=quiz.status,
-        time_per_question=quiz.time_per_question,
-        maximum_attempts=quiz.maximum_attempts,
-        scoring_config=quiz.scoring_config,
-        created_by=quiz.created_by,
-        question_count=len(quiz.questions),
-        created_at=quiz.created_at,
-        updated_at=quiz.updated_at,
-        published_at=quiz.published_at,
-    )
+    return _build_quiz_admin_response(quiz)
 
 
 @router.put("/{quiz_id}", response_model=QuizAdminResponse)
@@ -130,21 +110,7 @@ def update_quiz(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
 
     updated = quiz_service.update_quiz(db, quiz=quiz, quiz_in=quiz_in)
-    return QuizAdminResponse(
-        id=updated.id,
-        title=updated.title,
-        description=updated.description,
-        difficulty=updated.difficulty,
-        status=updated.status,
-        time_per_question=updated.time_per_question,
-        maximum_attempts=updated.maximum_attempts,
-        scoring_config=updated.scoring_config,
-        created_by=updated.created_by,
-        question_count=len(updated.questions),
-        created_at=updated.created_at,
-        updated_at=updated.updated_at,
-        published_at=updated.published_at,
-    )
+    return _build_quiz_admin_response(updated)
 
 
 @router.delete("/{quiz_id}", status_code=status.HTTP_200_OK, dependencies=[Depends(rate_limit("quiz_delete", max_requests=20, window_seconds=60))])
@@ -210,21 +176,30 @@ def unpublish_quiz(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
 
     unpublished = quiz_service.unpublish_quiz(db, quiz=quiz)
-    return QuizAdminResponse(
-        id=unpublished.id,
-        title=unpublished.title,
-        description=unpublished.description,
-        difficulty=unpublished.difficulty,
-        status=unpublished.status,
-        time_per_question=unpublished.time_per_question,
-        maximum_attempts=unpublished.maximum_attempts,
-        scoring_config=unpublished.scoring_config,
-        created_by=unpublished.created_by,
-        question_count=len(unpublished.questions),
-        created_at=unpublished.created_at,
-        updated_at=unpublished.updated_at,
-        published_at=unpublished.published_at,
-    )
+    return _build_quiz_admin_response(unpublished)
+
+
+@router.post("/{quiz_id}/toggle-results", response_model=QuizAdminResponse)
+def toggle_quiz_results_visibility(
+    quiz_id: int,
+    publish: Optional[bool] = None,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Toggle whether student results and ranks are published/visible for a quiz.
+    """
+    quiz = quiz_service.get_quiz_by_id(db, quiz_id=quiz_id)
+    if not quiz:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quiz not found")
+
+    if publish is not None:
+        quiz.results_published = bool(publish)
+    else:
+        quiz.results_published = not bool(getattr(quiz, "results_published", True))
+    db.commit()
+    db.refresh(quiz)
+    return _build_quiz_admin_response(quiz)
 
 
 @router.post("/{quiz_id}/duplicate", response_model=QuizAdminResponse, status_code=status.HTTP_201_CREATED)
@@ -240,21 +215,7 @@ def duplicate_quiz(
     if not duplicated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Original quiz not found")
 
-    return QuizAdminResponse(
-        id=duplicated.id,
-        title=duplicated.title,
-        description=duplicated.description,
-        difficulty=duplicated.difficulty,
-        status=duplicated.status,
-        time_per_question=duplicated.time_per_question,
-        maximum_attempts=duplicated.maximum_attempts,
-        scoring_config=duplicated.scoring_config,
-        created_by=duplicated.created_by,
-        question_count=len(duplicated.questions),
-        created_at=duplicated.created_at,
-        updated_at=duplicated.updated_at,
-        published_at=duplicated.published_at,
-    )
+    return _build_quiz_admin_response(duplicated)
 
 
 # --- Question Management Endpoints ---
@@ -293,9 +254,11 @@ def add_question_to_quiz(
 
 
 @router.put("/questions/{question_id}", response_model=QuestionAdminResponse)
+@router.put("/{quiz_id}/questions/{question_id}", response_model=QuestionAdminResponse)
 def update_quiz_question(
     question_id: int,
     question_in: QuestionUpdate,
+    quiz_id: Optional[int] = None,
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -309,8 +272,10 @@ def update_quiz_question(
 
 
 @router.delete("/questions/{question_id}", status_code=status.HTTP_200_OK)
+@router.delete("/{quiz_id}/questions/{question_id}", status_code=status.HTTP_200_OK)
 def delete_quiz_question(
     question_id: int,
+    quiz_id: Optional[int] = None,
     current_admin: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ):
@@ -406,6 +371,13 @@ def import_docx_quiz(
         description=import_data.description,
         difficulty=import_data.difficulty,
         time_per_question=import_data.time_per_question,
+        duration_minutes=getattr(import_data, "duration_minutes", 15),
+        marks_per_question=getattr(import_data, "marks_per_question", 1),
+        negative_marks=getattr(import_data, "negative_marks", 0),
+        access_code=getattr(import_data, "access_code", None),
+        randomize_questions=getattr(import_data, "randomize_questions", False),
+        randomize_options=getattr(import_data, "randomize_options", False),
+        results_published=getattr(import_data, "results_published", True),
         maximum_attempts=import_data.maximum_attempts,
     )
     quiz = quiz_service.create_quiz(db, quiz_in=quiz_in, admin_id=current_admin.id)
@@ -445,18 +417,4 @@ def import_docx_quiz(
         }
     )
 
-    return QuizAdminResponse(
-        id=quiz.id,
-        title=quiz.title,
-        description=quiz.description,
-        difficulty=quiz.difficulty,
-        status=quiz.status,
-        time_per_question=quiz.time_per_question,
-        maximum_attempts=quiz.maximum_attempts,
-        scoring_config=quiz.scoring_config,
-        created_by=quiz.created_by,
-        question_count=len(import_data.questions),
-        created_at=quiz.created_at,
-        updated_at=quiz.updated_at,
-        published_at=quiz.published_at,
-    )
+    return _build_quiz_admin_response(quiz)

@@ -18,6 +18,13 @@ class Quiz(Base):
     difficulty: Mapped[str] = mapped_column(String(50), default="MEDIUM", nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="DRAFT", index=True, nullable=False)  # DRAFT, PUBLISHED, UNPUBLISHED, ARCHIVED
     time_per_question: Mapped[int] = mapped_column(Integer, default=30, nullable=False)  # in seconds
+    duration_minutes: Mapped[int] = mapped_column(Integer, default=15, nullable=False)  # overall quiz duration in minutes
+    marks_per_question: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # marks per correct answer
+    negative_marks: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # negative marks per wrong answer
+    access_code: Mapped[Optional[str]] = mapped_column(String(50), index=True, nullable=True)  # optional join code
+    randomize_questions: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    randomize_options: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    results_published: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     maximum_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 0 = unlimited
     scoring_config: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     
