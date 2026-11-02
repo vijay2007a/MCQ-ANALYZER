@@ -1,4 +1,8 @@
+import logging
 from typing import List, Optional
+from app.core.config import settings
+
+logger = logging.getLogger('sbk_quiz.quizzes')
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_admin
@@ -449,11 +453,33 @@ def close_quiz_and_export(
         quiz.status = "ARCHIVED"
         quiz.updated_at = datetime.now(timezone.utc)
         db.flush()
+        # Reset live proctoring & anti-cheat logs for this closed quiz
+        all_quiz_sessions = db.query(QuizSession).filter(QuizSession.quiz_id == quiz_id).all()
+        session_id_strs = {str(s.id) for s in all_quiz_sessions}
+        session_id_strs.update(str(s.id) for s in sessions)
+        player_logs = db.query(AuditLog).filter(AuditLog.actor_type == "PLAYER").all()
+        for log in player_logs:
+            details = log.details or {}
+            log_qid = details.get("quiz_id")
+            if (log_qid is not None and str(log_qid) == str(quiz_id)) or (log.resource_id in session_id_strs):
+                db.delete(log)
+
         # Construct the complete file before committing the archive operation.
         excel = export_service.generate_quiz_results_excel(db, quiz_id=quiz_id)
         db.add(AuditLog(event_type="QUIZ_CLOSED", actor_type="ADMIN",
                         actor_id=str(current_admin.id), resource_type="QUIZ", resource_id=str(quiz_id)))
         db.commit()
+
+        if settings.DATABASE_BACKEND == "firestore":
+            try:
+                from app.core.firebase import firestore_client
+                client = firestore_client()
+                for d in client.collection("monitoring_events").where("quiz_id", "==", quiz_id).stream():
+                    d.reference.delete()
+                for d in client.collection("monitoring_events").where("quiz_id", "==", str(quiz_id)).stream():
+                    d.reference.delete()
+            except Exception as e:
+                logger.warning(f"Note: error cleaning realtime monitoring_events on close: {e}")
     except Exception:
         db.rollback()
         raise

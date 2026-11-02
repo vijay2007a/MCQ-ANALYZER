@@ -862,7 +862,7 @@
                                     <span class="material-symbols-outlined text-lg">sensors</span>
                                     <span>4. Live Quiz</span>
                                 </div>
-                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span id="live-quiz-pulse-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse hidden"></span>
                             </button>
                             <button onclick="switchAdminTab('results')" id="tab-btn-results" role="tab" aria-selected="false" class="admin-tab w-auto lg:w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shrink-0">
                                 <span class="material-symbols-outlined text-lg">assessment</span>
@@ -1340,9 +1340,15 @@
                                             <span class="text-xs font-semibold text-emerald-700">Live Telemetry Sync</span>
                                         </div>
                                     </div>
-                                    <button onclick="loadAdminMonitoring()" title="Refresh Monitoring Logs" class="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition">
-                                        <span class="material-symbols-outlined text-xl">refresh</span>
-                                    </button>
+                                    <div class="flex items-center space-x-1.5">
+                                        <button onclick="clearAdminMonitoring()" title="Reset Proctoring Logs" class="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-slate-50 hover:bg-red-50 text-slate-600 hover:text-red-600 transition flex items-center space-x-1 border border-slate-200/60">
+                                            <span class="material-symbols-outlined text-sm">mop</span>
+                                            <span>Reset</span>
+                                        </button>
+                                        <button onclick="loadAdminMonitoring()" title="Refresh Monitoring Logs" class="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 transition border border-slate-200/60">
+                                            <span class="material-symbols-outlined text-xl">refresh</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2278,8 +2284,11 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             const questionOrder = currentQuestion ? currentQuestion.question_number : 1;
             const timeStr = new Date().toLocaleTimeString();
 
+            const sName = activeSession.playerName || studentName || 'Student';
+            const sReg = activeSession.registerNumber || studentRegNo || '';
             const eventData = {
-                student_name: activeSession.playerName || studentName || 'Student',
+                student_name: sName,
+                register_number: sReg,
                 quiz_id: activeSession.quizId,
                 quiz_title: activeSession.quizTitle || 'Assessment',
                 session_id: activeSession.sessionId,
@@ -2287,7 +2296,14 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 question_number: questionOrder,
                 timestamp: timeStr,
                 created_at: now,
-                details: details
+                details: {
+                    ...details,
+                    student_name: sName,
+                    player_name: sName,
+                    register_number: sReg,
+                    quiz_id: activeSession.quizId,
+                    quiz_title: activeSession.quizTitle || 'Assessment'
+                }
             };
 
             // 1. Post to Server Authoritative Backend Endpoint
@@ -3628,6 +3644,13 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 allAdminQuizzesCache = quizzes || [];
                 renderAdminQuizzesTable();
 
+                const hasPublished = (allAdminQuizzesCache || []).some(q => q.status === 'PUBLISHED');
+                const liveDot = document.getElementById('live-quiz-pulse-dot');
+                if (liveDot) {
+                    if (hasPublished) liveDot.classList.remove('hidden');
+                    else liveDot.classList.add('hidden');
+                }
+
                 // Populate Live Quiz Control selector as well
                 const liveSelect = document.getElementById('live-room-quiz-select') || document.getElementById('live-control-quiz-select');
                 if (liveSelect) {
@@ -4113,6 +4136,12 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 currentLiveControlQuiz = null;
                 const select = document.getElementById('live-room-quiz-select');
                 if (select) select.value = '';
+
+                // Reset and clear proctoring logs for the closed quiz
+                allMonitoringEvents = allMonitoringEvents.filter(ev => String(ev.quiz_id) !== String(quizId));
+                processMonitoringEvents(allMonitoringEvents);
+                renderMonitoringDashboard();
+
                 await loadAdminQuizzes();
                 loadAdminDashboardStats();
                 switchAdminTab('results');
@@ -4924,10 +4953,17 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             monitoredSessionsMap = {};
             events.forEach(ev => {
                 const sessId = String(ev.session_id || `${ev.student_name}_${ev.quiz_id}`);
+                let name = ev.student_name || ev.details?.player_name || ev.details?.student_name || '';
+                if (!name || /^\d{6,}$/.test(String(name).trim())) {
+                    name = ev.details?.player_name || ev.details?.student_name || '';
+                }
+                const regNo = ev.register_number || ev.details?.register_number || '';
+
                 if (!monitoredSessionsMap[sessId]) {
                     monitoredSessionsMap[sessId] = {
                         sessionId: ev.session_id,
-                        studentName: ev.student_name || 'Student',
+                        studentName: name || 'Student',
+                        registerNumber: regNo,
                         quizId: ev.quiz_id,
                         quizTitle: ev.quiz_title || 'Assessment',
                         events: [],
@@ -4944,6 +4980,15 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                     };
                 }
                 const sess = monitoredSessionsMap[sessId];
+                if (name && (!sess.studentName || sess.studentName === 'Student' || /^\d{6,}$/.test(String(sess.studentName).trim()))) {
+                    sess.studentName = name;
+                }
+                if (regNo && !sess.registerNumber) {
+                    sess.registerNumber = regNo;
+                }
+                if (ev.quiz_title && (!sess.quizTitle || sess.quizTitle === 'Assessment')) {
+                    sess.quizTitle = ev.quiz_title;
+                }
                 sess.events.push(ev);
 
                 if (ev.event_type === 'COPY_ATTEMPT') sess.copyCount++;
@@ -4958,24 +5003,66 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             });
         }
 
+        async function clearAdminMonitoring() {
+            if (!confirm("Reset and clear all proctoring & anti-cheat logs?")) return;
+            try {
+                await fetch('/api/admin/monitoring/reset', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+            } catch (e) {}
+            allMonitoringEvents = [];
+            monitoredSessionsMap = {};
+            renderMonitoringDashboard();
+            showToast("Proctoring logs have been reset.");
+        }
+
         async function loadAdminMonitoring() {
             try {
+                // Fetch published quizzes so we only monitor currently published/active quizzes
+                let activeQuizIds = null;
+                try {
+                    const qRes = await fetch('/api/admin/quizzes', {
+                        headers: { 'Authorization': `Bearer ${adminToken}` }
+                    });
+                    if (qRes.ok) {
+                        const qData = await qRes.json();
+                        activeQuizIds = new Set(
+                            (qData || []).filter(q => q.status === 'PUBLISHED').map(q => String(q.id))
+                        );
+                    }
+                } catch (e) {}
+
                 const res = await fetch('/api/admin/audit-logs?actor_type=PLAYER&size=100', {
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    const backendEvents = (data.items || []).map(item => ({
-                        student_name: item.actor_id,
-                        session_id: item.resource_id,
-                        quiz_id: item.details?.quiz_id,
-                        quiz_title: item.details?.quiz_title || 'Assessment',
-                        event_type: item.event_type,
-                        question_number: item.details?.question_order || 1,
-                        timestamp: new Date(item.created_at).toLocaleTimeString(),
-                        created_at: new Date(item.created_at).getTime(),
-                        details: item.details
-                    }));
+                    let backendEvents = (data.items || []).map(item => {
+                        const details = item.details || {};
+                        let studentName = details.player_name || details.student_name;
+                        if (!studentName && item.actor_id && !/^\d{6,}$/.test(String(item.actor_id).trim())) {
+                            studentName = item.actor_id;
+                        }
+                        return {
+                            student_name: studentName || 'Student',
+                            register_number: details.register_number || '',
+                            session_id: item.resource_id,
+                            quiz_id: details.quiz_id,
+                            quiz_title: details.quiz_title || 'Assessment',
+                            event_type: item.event_type,
+                            question_number: details.question_order || 1,
+                            timestamp: new Date(item.created_at).toLocaleTimeString(),
+                            created_at: new Date(item.created_at).getTime(),
+                            details: details
+                        };
+                    });
+
+                    // Only retain events belonging to currently published quizzes if activeQuizIds is known
+                    if (activeQuizIds !== null) {
+                        backendEvents = backendEvents.filter(ev => ev.quiz_id && activeQuizIds.has(String(ev.quiz_id)));
+                        allMonitoringEvents = allMonitoringEvents.filter(ev => ev.quiz_id && activeQuizIds.has(String(ev.quiz_id)));
+                    }
 
                     allMonitoringEvents = [...backendEvents, ...allMonitoringEvents];
                     const seen = new Set();
@@ -5017,7 +5104,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             }
 
             if (sessions.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400 font-sans">No proctoring violations recorded yet. Active student monitoring events will appear here in real-time.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400 font-sans">No active proctoring violations recorded. Active student monitoring events will appear here in real-time.</td></tr>`;
                 return;
             }
 
@@ -5033,7 +5120,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 return `
                     <tr class="hover:bg-slate-50/80 transition">
                         <td class="py-3.5 px-4">
-                            <div class="font-bold text-slate-900">${escapeHtml(sess.studentName)}</div>
+                            <div class="font-bold text-slate-900">${escapeHtml(sess.studentName)}${sess.registerNumber ? ` <span class="text-xs font-mono text-slate-500 font-normal">(${escapeHtml(sess.registerNumber)})</span>` : ''}</div>
                             <div class="text-xs text-slate-500">${escapeHtml(sess.quizTitle)}</div>
                         </td>
                         <td class="py-3.5 px-4 text-center">
@@ -5074,7 +5161,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             const sess = monitoredSessionsMap[sessionId];
             if (!sess) return;
 
-            document.getElementById('timeline-student-name').textContent = sess.studentName;
+            document.getElementById('timeline-student-name').textContent = `${sess.studentName}${sess.registerNumber ? ` (${sess.registerNumber})` : ''}`;
             document.getElementById('timeline-quiz-title').textContent = sess.quizTitle;
             document.getElementById('timeline-total-warnings').textContent = sess.totalWarnings;
             

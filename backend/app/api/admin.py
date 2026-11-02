@@ -270,3 +270,43 @@ def get_live_quiz_control_data(
         "participants": participants,
         "leaderboard": [e.model_dump() for e in lb_entries],
     }
+
+
+@router.post("/monitoring/reset")
+def reset_monitoring_logs(
+    quiz_id: Optional[int] = Query(None, description="Optional quiz ID to reset monitoring for"),
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Clear proctoring and student telemetry logs. If quiz_id is provided, clears only that quiz's logs.
+    """
+    from app.models.audit_log import AuditLog
+    player_logs = db.query(AuditLog).filter(AuditLog.actor_type == "PLAYER").all()
+    for log in player_logs:
+        details = log.details or {}
+        if quiz_id:
+            log_qid = details.get("quiz_id")
+            if log_qid is not None and str(log_qid) == str(quiz_id):
+                db.delete(log)
+        else:
+            db.delete(log)
+    db.commit()
+
+    if settings.DATABASE_BACKEND == "firestore":
+        try:
+            from app.core.firebase import firestore_client
+            client = firestore_client()
+            if quiz_id:
+                for doc in client.collection("monitoring_events").where("quiz_id", "==", quiz_id).stream():
+                    doc.reference.delete()
+                for doc in client.collection("monitoring_events").where("quiz_id", "==", str(quiz_id)).stream():
+                    doc.reference.delete()
+            else:
+                for doc in client.collection("monitoring_events").stream():
+                    doc.reference.delete()
+        except Exception:
+            pass
+
+    return {"status": "SUCCESS", "message": "Proctoring logs have been reset."}
+

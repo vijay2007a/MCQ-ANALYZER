@@ -230,12 +230,12 @@ class SessionService:
             db,
             event_type="QUIZ_SESSION_STARTED",
             actor_type="PLAYER",
-            actor_id=str(session.id),
+            actor_id=clean_name,
             ip_address=client_ip,
             user_agent=user_agent,
             resource_type="SESSION",
             resource_id=str(session.id),
-            details={"quiz_id": quiz.id, "player_name": clean_name, "register_number": clean_reg},
+            details={"quiz_id": quiz.id, "quiz_title": quiz.title, "player_name": clean_name, "student_name": clean_name, "register_number": clean_reg},
         )
 
         questions = db.query(Question).filter(Question.quiz_id == quiz_id).all()
@@ -465,12 +465,19 @@ class SessionService:
             db,
             event_type="QUIZ_COMPLETED",
             actor_type="PLAYER",
-            actor_id=str(session.id),
+            actor_id=session.player_name,
             ip_address=client_ip,
             user_agent=user_agent,
             resource_type="SESSION",
             resource_id=str(session.id),
-            details={"quiz_id": session.quiz_id, "player_name": session.player_name, "reason": reason},
+            details={
+                "quiz_id": session.quiz_id,
+                "quiz_title": session.quiz.title if session.quiz else "Assessment",
+                "player_name": session.player_name,
+                "student_name": session.player_name,
+                "register_number": getattr(session, "register_number", None) or "",
+                "reason": reason,
+            },
         )
         db.commit()
         _, rank = result_service.get_player_result_with_rank(db, session.id)
@@ -503,12 +510,19 @@ class SessionService:
                 db,
                 event_type="SESSION_EXPIRED_SUBMISSION",
                 actor_type="PLAYER",
-                actor_id=str(session.id),
+                actor_id=session.player_name,
                 ip_address=client_ip,
                 user_agent=user_agent,
                 resource_type="SESSION",
                 resource_id=str(session.id),
-                details={"submitted_question_order": question_order},
+                details={
+                    "quiz_id": session.quiz_id,
+                    "quiz_title": session.quiz.title if session.quiz else "Assessment",
+                    "player_name": session.player_name,
+                    "student_name": session.player_name,
+                    "register_number": getattr(session, "register_number", None) or "",
+                    "submitted_question_order": question_order,
+                },
             )
             raise ValueError("Session expired before answer submission")
 
@@ -523,12 +537,20 @@ class SessionService:
                 db,
                 event_type="REPLAY_ATTEMPT",
                 actor_type="PLAYER",
-                actor_id=str(session.id),
+                actor_id=session.player_name,
                 ip_address=client_ip,
                 user_agent=user_agent,
                 resource_type="SESSION",
                 resource_id=str(session.id),
-                details={"idempotency_key": idempotency_key, "question_order": question_order},
+                details={
+                    "quiz_id": session.quiz_id,
+                    "quiz_title": session.quiz.title if session.quiz else "Assessment",
+                    "player_name": session.player_name,
+                    "student_name": session.player_name,
+                    "register_number": getattr(session, "register_number", None) or "",
+                    "idempotency_key": idempotency_key,
+                    "question_order": question_order,
+                },
             )
             question = existing_attempt.question
             total_questions = len(session.quiz.questions)
@@ -560,12 +582,20 @@ class SessionService:
                 db,
                 event_type="OUT_OF_ORDER_SUBMISSION",
                 actor_type="PLAYER",
-                actor_id=str(session.id),
+                actor_id=session.player_name,
                 ip_address=client_ip,
                 user_agent=user_agent,
                 resource_type="SESSION",
                 resource_id=str(session.id),
-                details={"expected": session.current_question_order, "received": question_order},
+                details={
+                    "quiz_id": session.quiz_id,
+                    "quiz_title": session.quiz.title if session.quiz else "Assessment",
+                    "player_name": session.player_name,
+                    "student_name": session.player_name,
+                    "register_number": getattr(session, "register_number", None) or "",
+                    "expected": session.current_question_order,
+                    "received": question_order,
+                },
             )
             raise ValueError(
                 f"Invalid question sequence. Expected question #{session.current_question_order}, received #{question_order}"
@@ -621,12 +651,18 @@ class SessionService:
                 db,
                 event_type="QUIZ_COMPLETED",
                 actor_type="PLAYER",
-                actor_id=str(session.id),
+                actor_id=session.player_name,
                 ip_address=client_ip,
                 user_agent=user_agent,
                 resource_type="SESSION",
                 resource_id=str(session.id),
-                details={"quiz_id": session.quiz_id, "player_name": session.player_name},
+                details={
+                    "quiz_id": session.quiz_id,
+                    "quiz_title": session.quiz.title if session.quiz else "Assessment",
+                    "player_name": session.player_name,
+                    "student_name": session.player_name,
+                    "register_number": getattr(session, "register_number", None) or "",
+                },
             )
 
         db.commit()

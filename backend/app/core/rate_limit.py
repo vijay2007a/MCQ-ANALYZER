@@ -56,6 +56,11 @@ def rate_limit(key_prefix: str, max_requests: int, window_seconds: int) -> Calla
             client_ip = client_ip.split(",")[0].strip()
         
         rate_key = f"ratelimit:{key_prefix}:{client_ip}"
+        # A classroom shares one public IP (NAT); limit session endpoints per
+        # student session instead of throttling the whole room together.
+        session_id = request.path_params.get("session_id")
+        if session_id is not None:
+            rate_key = f"{rate_key}:{session_id}"
         
         if redis_client:
             try:

@@ -229,6 +229,9 @@ def record_player_event(
         "quiz_title": session.quiz.title,
         "session_status": session.status,
         "current_question_order": session.current_question_order,
+        "student_name": session.player_name,
+        "player_name": session.player_name,
+        "register_number": getattr(session, "register_number", None) or "",
     })
 
     ev_upper = event_in.event_type.upper()

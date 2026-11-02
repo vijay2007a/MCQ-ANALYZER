@@ -77,7 +77,8 @@ def get_public_quiz_info(quiz_id: int, db: Session = Depends(get_db)):
     "/quizzes/{quiz_id}/start",
     response_model=StartQuizResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(rate_limit("player_start", max_requests=20, window_seconds=60))]
+    # Per-IP: a whole classroom behind one NAT must be able to join at once.
+    dependencies=[Depends(rate_limit("player_start", max_requests=300, window_seconds=60))]
 )
 def start_quiz(
     request: Request,
