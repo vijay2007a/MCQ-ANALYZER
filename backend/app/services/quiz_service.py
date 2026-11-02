@@ -21,6 +21,8 @@ class QuizService:
             query = query.filter(Quiz.is_deleted == False)
         if status:
             query = query.filter(Quiz.status == status.upper())
+        else:
+            query = query.filter(Quiz.status != "ARCHIVED")
         
         total = query.count()
         quizzes = query.order_by(Quiz.created_at.desc()).offset(skip).limit(limit).all()
@@ -138,6 +140,8 @@ class QuizService:
     @staticmethod
     def validate_for_publishing(quiz: Quiz) -> Tuple[bool, List[str]]:
         errors = []
+        if quiz.status == "ARCHIVED":
+            return False, ["Closed quizzes cannot be published again."]
         if not quiz.title or len(quiz.title.strip()) < 3:
             errors.append("Quiz title must be at least 3 characters long.")
         

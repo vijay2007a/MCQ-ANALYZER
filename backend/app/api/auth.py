@@ -12,11 +12,20 @@ router = APIRouter(prefix="/admin/auth", tags=["Admin Authentication"])
 
 @router.post("/firebase-login", response_model=TokenResponse)
 def admin_firebase_login(request: Request, login_data: FirebaseAuthLoginRequest, db: Session = Depends(get_db)):
-    """Firebase student identities cannot authenticate as administrators."""
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Admin access requires a provisioned email and password account.",
-    )
+    """Exchange a verified, authorized Firebase identity for an application session."""
+    from app.core.config import settings
+    from app.core.firebase import verify_admin_identity
+    if settings.DATABASE_BACKEND != "firestore":
+        raise HTTPException(status_code=403, detail="Firebase admin login is not enabled")
+    if not login_data.id_token:
+        raise HTTPException(status_code=401, detail="Firebase ID token required")
+    identity = verify_admin_identity(login_data.id_token)
+    admin = auth_service.get_admin_by_email(db, identity["email"])
+    if not admin or not admin.is_active:
+        raise HTTPException(status_code=403, detail="Administrator account is not authorized")
+    # Email/UID supplied by the browser are never used for authorization.
+    return TokenResponse(access_token=login_data.id_token,
+                         token_type="bearer", role=admin.role, email=admin.email)
 
 
 @router.post("/login", response_model=TokenResponse, dependencies=[Depends(rate_limit("admin_login", max_requests=10, window_seconds=60))])
@@ -25,6 +34,9 @@ def admin_login(request: Request, login_data: AdminLoginRequest, db: Session = D
     Authenticate an admin user and return a signed JWT access token.
     Rate limited: 10 attempts per minute. Generic error to prevent email enumeration.
     """
+    from app.core.config import settings
+    if settings.DATABASE_BACKEND == "firestore":
+        raise HTTPException(status_code=403, detail="Use Firebase sign-in")
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("User-Agent")
 
@@ -68,6 +80,9 @@ def change_admin_password(
     """
     Change the current admin's password.
     """
+    from app.core.config import settings
+    if settings.DATABASE_BACKEND == "firestore":
+        raise HTTPException(status_code=400, detail="Change your password through Firebase Authentication")
     success = auth_service.change_password(
         db,
         admin=current_admin,

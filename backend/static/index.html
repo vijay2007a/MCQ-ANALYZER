@@ -390,6 +390,7 @@
                         <span class="material-symbols-outlined text-base">login</span>
                     </button>
 
+                    <button type="button" onclick="handleGoogleSignIn('admin')" class="w-full rounded-xl border border-slate-300 py-3 text-sm font-semibold hover:bg-slate-50">Sign in with Google</button>
                     <p class="text-center text-xs text-slate-500">Admin access is restricted to provisioned accounts.</p>
                 </form>
             </div>
@@ -1299,10 +1300,11 @@
                                             <th class="py-3 px-3 text-right">Time</th>
                                             <th class="py-3 px-3 text-center">Warnings</th>
                                             <th class="py-3 px-3 text-right">Submitted At</th>
+                                            <th class="py-3 px-3 text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="admin-results-tbody" class="divide-y divide-slate-100">
-                                        <tr><td colspan="10" class="py-8 text-center text-slate-400">Loading student results...</td></tr>
+                                        <tr><td colspan="11" class="py-8 text-center text-slate-400">Loading student results...</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -2045,7 +2047,10 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             signInWithPopup,
             GoogleAuthProvider,
             signOut, 
-            onAuthStateChanged 
+            onAuthStateChanged,
+            EmailAuthProvider,
+            reauthenticateWithCredential,
+            updatePassword
         } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
         import {
             getFirestore,
@@ -2105,12 +2110,22 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
         window.firebaseSignUp = (email, password) => createUserWithEmailAndPassword(firebaseAuth, email, password);
         window.firebaseSignInWithGoogle = () => signInWithPopup(firebaseAuth, googleProvider);
         window.firebaseSignOut = () => signOut(firebaseAuth);
+        window.firebaseChangePassword = async (currentPassword, newPassword) => {
+            const user = firebaseAuth.currentUser;
+            if (!user) throw new Error('Please sign in again.');
+            await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, currentPassword));
+            await updatePassword(user, newPassword);
+        };
 
         onAuthStateChanged(firebaseAuth, async (user) => {
             if (user) {
                 window.firebaseUser = user;
 
 
+                if (localStorage.getItem('sbk_quiz_firebase_role') === 'admin') {
+                    updateNavHeader();
+                    return;
+                }
                 // Persist non-privileged user profile in Firestore `users/{uid}` without client-assigned admin or role mutation
                 try {
                     const userDocRef = doc(firebaseDb, 'users', user.uid);
@@ -2169,6 +2184,20 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
         let studentRegNo = localStorage.getItem('sbk_quiz_student_regno') || '';
         let adminToken = null; // Restored only after server verification.
         let adminEmail = localStorage.getItem('sbk_quiz_admin_email') || localStorage.getItem('quizmaster_admin_email') || null;
+        const originalFetch = window.fetch.bind(window);
+        window.fetch = async (input, options = {}) => {
+            const url = new URL(typeof input === 'string' ? input : input.url, window.location.origin);
+            if (adminToken && url.origin === window.location.origin && url.pathname.startsWith('/api/admin/')) {
+                const user = window.firebaseAuth?.currentUser;
+                if (user) {
+                    adminToken = await user.getIdToken();
+                    const headers = new Headers(options.headers || (input instanceof Request ? input.headers : undefined));
+                    headers.set('Authorization', `Bearer ${adminToken}`);
+                    options = { ...options, headers };
+                }
+            }
+            return originalFetch(input, options);
+        };
         let activeRoleTab = 'student';
         
         let publicQuizzesCache = [];
@@ -2186,76 +2215,6 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
         let selectedTimelineSessionId = null;
         let lastRecordedEventTime = 0;
         let lastRecordedEventType = null;
-
-        // ==================== FIRESTORE STORAGE HELPERS ====================
-        async function syncQuizToFirestore(quizObj, questionsList = null) {
-            if (!window.firebaseDb || !window.firebaseSetDoc || !window.firebaseDoc || !quizObj || !quizObj.id) return;
-            try {
-                await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'quizzes', String(quizObj.id)), {
-                    quiz_id: quizObj.id,
-                    title: quizObj.title || '',
-                    description: quizObj.description || '',
-                    difficulty: quizObj.difficulty || 'MEDIUM',
-                    status: quizObj.status || 'DRAFT',
-                    time_per_question: quizObj.time_per_question || 30,
-                    duration_minutes: quizObj.duration_minutes || 15,
-                    marks_per_question: quizObj.marks_per_question || 1,
-                    access_code: quizObj.access_code || null,
-                    randomize_questions: !!quizObj.randomize_questions,
-                    randomize_options: !!quizObj.randomize_options,
-                    results_published: quizObj.results_published !== false,
-                    question_count: quizObj.question_count ?? (questionsList ? questionsList.length : 0),
-                    updated_at: new Date().toISOString()
-                }, { merge: true });
-
-                if (Array.isArray(questionsList) && questionsList.length > 0) {
-                    for (let i = 0; i < questionsList.length; i++) {
-                        const q = questionsList[i];
-                        const qDocId = q.id ? `${quizObj.id}_q_${q.id}` : `${quizObj.id}_order_${i + 1}`;
-                        await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'questions', qDocId), {
-                            quiz_id: quizObj.id,
-                            question_order: q.question_order || (i + 1),
-                            question_text: q.question_text || '',
-                            option_a: q.option_a || '',
-                            option_b: q.option_b || '',
-                            option_c: q.option_c || '',
-                            option_d: q.option_d || '',
-                            correct_option: q.correct_option || 'A',
-                            explanation: q.explanation || '',
-                            updated_at: new Date().toISOString()
-                        }, { merge: true });
-                    }
-                }
-            } catch (e) {
-                console.warn("Firestore quiz sync notice:", e);
-            }
-        }
-
-        async function syncSessionToFirestore(sessionData) {
-            if (!window.firebaseDb || !window.firebaseSetDoc || !window.firebaseDoc || !window.firebaseUser || !sessionData || !sessionData.sessionId) return;
-            try {
-                await window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, 'quiz_sessions', String(sessionData.sessionId)), {
-                    uid: window.firebaseUser.uid,
-                    session_id: sessionData.sessionId,
-                    quiz_id: sessionData.quizId,
-                    quiz_title: sessionData.quizTitle || '',
-                    student_name: sessionData.playerName || studentName || 'Student',
-                    register_number: sessionData.registerNumber || studentRegNo || '',
-                    status: sessionData.status || 'ACTIVE',
-                    saved_answers: sessionData.savedAnswers || {},
-                    marked_for_review: sessionData.markedForReview || [],
-                    total_questions: sessionData.totalQuestions || 0,
-                    updated_at: new Date().toISOString()
-                }, { merge: true });
-            } catch (e) {
-                console.warn("Firestore session sync notice:", e);
-            }
-        }
-
-        async function syncResultToFirestore(_resultData) {
-            // Quiz results are authoritative on the backend; client-side result creation is disabled per security policy.
-            return;
-        }
 
         // Dark / Light Mode Controller (Modern Web Guidance compliant)
         function setColorScheme(scheme) {
@@ -2374,12 +2333,8 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             }
         }
 
-        // Google authentication is for students only.
+        // Firebase verifies identity; the backend verifies administrator access.
         async function handleGoogleSignIn(role = 'student') {
-            if (role !== 'student') {
-                showToast("Use your administrator email and password.", true);
-                return;
-            }
             if (!window.firebaseSignInWithGoogle) {
                 showToast("Firebase Google Sign-In is still initializing. Please try again in a moment.", true);
                 return;
@@ -2411,7 +2366,14 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                     return;
                 }
 
+                await acceptFirebaseAdmin(user);
             } catch (err) {
+                if (role === 'admin') {
+                    adminToken = null;
+                    adminEmail = null;
+                    ['sbk_quiz_admin_token', 'sbk_quiz_admin_email', 'quizmaster_admin_token', 'quizmaster_admin_email'].forEach(key => localStorage.removeItem(key));
+                    updateNavHeader();
+                }
                 console.error("Google Sign-In Error:", err);
                 let msg = "Google Sign-In could not be completed.";
                 if (err.code === 'auth/unauthorized-domain') {
@@ -2459,7 +2421,26 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             navigateTo('landing');
         }
 
-        // Only the backend can authenticate a provisioned administrator.
+        async function acceptFirebaseAdmin(user) {
+            const idToken = await user.getIdToken(true);
+            const res = await fetch('/api/admin/auth/firebase-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_token: idToken, email: user.email })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.access_token) {
+                throw new Error(data.message || data.detail || 'This account is not authorized for admin access.');
+            }
+            adminToken = data.access_token;
+            adminEmail = data.email;
+            localStorage.setItem('sbk_quiz_admin_token', adminToken);
+            localStorage.setItem('sbk_quiz_admin_email', adminEmail);
+            updateNavHeader();
+            navigateTo('admin');
+            showToast('Administrator sign in successful!');
+        }
+
         async function handleAdminFirebaseLogin(e) {
             e.preventDefault();
             const email = document.getElementById('admin-auth-email').value.trim();
@@ -2469,36 +2450,23 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             const btn = document.getElementById('admin-auth-btn');
             const label = document.getElementById('admin-auth-btn-label');
             btn.disabled = true;
-            label.textContent = "Verifying credentials...";
+            label.textContent = 'Verifying credentials...';
+            localStorage.setItem('sbk_quiz_firebase_role', 'admin');
             try {
-                const res = await fetch('/api/admin/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
-                });
-                if (!res.ok) throw new Error("Invalid admin email or password.");
-                const data = await res.json();
-                if (!data.access_token) throw new Error("Admin authentication failed.");
-                adminToken = data.access_token;
-                adminEmail = data.email;
-                localStorage.setItem('sbk_quiz_admin_token', adminToken);
-                localStorage.setItem('sbk_quiz_admin_email', adminEmail);
-                localStorage.setItem('quizmaster_admin_token', adminToken);
-                localStorage.setItem('quizmaster_admin_email', adminEmail);
+                if (!window.firebaseSignIn) throw new Error('Sign-in is still loading. Please retry.');
+                const credential = await window.firebaseSignIn(email, password);
+                await acceptFirebaseAdmin(credential.user);
                 errBox.classList.add('hidden');
-                showToast("Administrator sign in successful!");
-                updateNavHeader();
-                navigateTo('admin');
             } catch (err) {
                 adminToken = null;
                 adminEmail = null;
                 ['sbk_quiz_admin_token', 'sbk_quiz_admin_email', 'quizmaster_admin_token', 'quizmaster_admin_email'].forEach(key => localStorage.removeItem(key));
                 updateNavHeader();
-                errText.textContent = err.message || "Admin sign in failed. Please try again.";
+                errText.textContent = err.message || 'Admin sign in failed.';
                 errBox.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
-                label.textContent = "Sign In with Email";
+                label.textContent = 'Sign In with Email';
             }
         }
 
@@ -2909,7 +2877,6 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                     sessionId: activeSession.sessionId,
                     sessionToken: activeSession.sessionToken
                 }));
-                syncSessionToFirestore({ ...activeSession, status: 'IN_PROGRESS' });
 
                 navigateTo('player');
                 document.getElementById('player-quiz-title').textContent = data.quiz_title;
@@ -3239,7 +3206,6 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                     const data = await res.json();
                     activeSession.savedAnswers = data.saved_answers || activeSession.savedAnswers;
                     activeSession.markedForReview = data.marked_for_review || activeSession.markedForReview;
-                    syncSessionToFirestore({ ...activeSession, status: 'IN_PROGRESS' });
                     if (badgeText) badgeText.textContent = "Saved to server";
                     if (badgeIcon) badgeIcon.textContent = "cloud_done";
                 }
@@ -3299,8 +3265,6 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
 
                 if (res.ok) {
                     const result = await res.json();
-                    syncSessionToFirestore({ ...activeSession, status: 'COMPLETED', score: result.total_score });
-                    syncResultToFirestore(result);
                     renderResultScreen(result);
                 } else {
                     await showFinalResults();
@@ -3644,7 +3608,6 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 }
                 const quizzes = await res.json();
                 allAdminQuizzesCache = quizzes || [];
-                allAdminQuizzesCache.forEach(q => syncQuizToFirestore(q));
                 renderAdminQuizzesTable();
 
                 // Populate Live Quiz Control selector as well
@@ -3931,9 +3894,17 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 const res = await fetch(url, {
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
-                if (!res.ok) return;
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.message || error.detail || "Unable to load the live quiz. Please retry.");
+                }
                 const data = await res.json();
                 currentLiveControlQuiz = data.quiz || null;
+                if (selectEl) {
+                    selectEl.innerHTML = '<option value="">Latest Active / Published Quiz</option>' +
+                        (data.quizzes || []).map(q => `<option value="${q.id}">${escapeHtml(q.title)} (${escapeHtml(q.status)})</option>`).join('');
+                    selectEl.value = data.quiz ? String(data.quiz.id) : '';
+                }
 
                 const setEl = (id, val) => {
                     const el = document.getElementById(id);
@@ -3954,9 +3925,10 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                         }`;
                     }
                 } else {
-                    setEl('live-room-quiz-title', 'All Active Quizzes');
-                    setEl('live-room-code', 'MULTI');
-                    setEl('live-room-status', 'MONITORING');
+                    setEl('live-room-quiz-title', 'No saved quizzes found');
+                    setEl('live-room-code', '-');
+                    setEl('live-room-status', 'NO QUIZ');
+                    setEl('live-room-duration', '-');
                 }
 
                 const joinedVal = data.joined_count ?? data.counts?.joined ?? 0;
@@ -4021,7 +3993,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                     }
                 }
             } catch (err) {
-                console.warn("Failed to refresh live control room:", err);
+                showToast(err.message || "Failed to refresh live control room", true);
             }
         }
 
@@ -4031,8 +4003,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 showToast("Select a specific quiz first", true);
                 return;
             }
-            await publishQuiz(quizId);
-            loadLiveControlRoom();
+            if (await publishQuiz(quizId)) await loadLiveControlRoom();
         }
 
         async function liveRoomCloseQuiz() {
@@ -4042,7 +4013,6 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 return;
             }
             await unpublishQuiz(quizId);
-            loadLiveControlRoom();
         }
 
         function openLiveRoomQrCode() {
@@ -4090,29 +4060,49 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
                 const data = await res.json();
-                if (!data.is_valid) {
-                    showToast(`Publishing failed: ${data.errors.join(', ')}`, true);
-                } else {
-                    showToast("Quiz successfully validated and published!");
-                    loadAdminQuizzes();
-                    loadAdminDashboardStats();
-                }
+                if (!res.ok) throw new Error(data.message || data.detail || "Failed to publish quiz");
+                if (!data.is_valid) throw new Error(`Publishing failed: ${(data.errors || []).join(', ')}`);
+                showToast("Quiz successfully validated and published!");
+                await loadAdminQuizzes();
+                loadAdminDashboardStats();
+                return true;
             } catch (err) {
-                showToast("Failed to publish quiz", true);
+                showToast(err.message || "Failed to publish quiz", true);
+                return false;
             }
         }
 
         async function unpublishQuiz(quizId) {
+            if (!confirm('Close this quiz? Saved answers will be finalized, results will download as Excel, and the quiz will be removed from active lists. Results remain in Results until you delete them.')) return false;
             try {
-                await fetch(`/api/admin/quizzes/${quizId}/unpublish`, {
+                const res = await fetch(`/api/admin/quizzes/${quizId}/close`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${adminToken}` }
                 });
-                showToast("Quiz closed / unpublished");
-                loadAdminQuizzes();
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.message || error.detail || 'Unable to close quiz');
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `quiz_${quizId}_results.xlsx`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+                currentLiveControlQuiz = null;
+                const select = document.getElementById('live-room-quiz-select');
+                if (select) select.value = '';
+                await loadAdminQuizzes();
                 loadAdminDashboardStats();
+                switchAdminTab('results');
+                showToast('Quiz closed. Excel download started; results are saved in Results.');
+                return true;
             } catch (err) {
-                showToast("Failed to unpublish quiz", true);
+                showToast(err.message || 'Unable to close quiz. Check Results to retry the download.', true);
+                return false;
             }
         }
 
@@ -4258,7 +4248,6 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 }
 
                 const createdQuiz = await res.json();
-                syncQuizToFirestore(createdQuiz);
 
                 closeCreateQuizModal();
                 showToast("Quiz draft created! Now add questions to publish.");
@@ -4672,7 +4661,6 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 }
 
                 const createdQuiz = await res.json();
-                syncQuizToFirestore(createdQuiz, payload.questions);
 
                 closeImportDocxModal();
                 showToast(publishImmediately ? "Word quiz imported and published successfully!" : "Word quiz imported as draft successfully!");
@@ -4813,7 +4801,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-slate-400">No matching student assessment results found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11" class="py-8 text-center text-slate-400">No matching student assessment results found.</td></tr>`;
                 return;
             }
 
@@ -4829,8 +4817,44 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                     <td class="py-3 px-3 text-right text-slate-600 font-mono text-xs tabular-nums">${(r.total_time_ms / 1000).toFixed(1)}s</td>
                     <td class="py-3 px-3 text-center font-bold ${(r.warnings_count || r.warning_count || 0) > 0 ? 'text-red-600' : 'text-slate-400'}">${r.warnings_count ?? r.warning_count ?? 0}</td>
                     <td class="py-3 px-3 text-right text-slate-400 text-xs whitespace-nowrap">${new Date(r.completed_at).toLocaleString()}</td>
+                    <td class="py-3 px-3 text-right whitespace-nowrap">
+                        <button onclick="downloadSavedQuizResults(${Number(r.quiz_id)})" class="text-primary hover:underline text-xs font-semibold mr-3">Download quiz Excel</button>
+                        <button onclick="deleteSavedResult(${Number(r.id)})" class="text-red-600 hover:underline text-xs font-semibold">Delete result</button>
+                    </td>
                 </tr>
             `).join('');
+        }
+
+        async function downloadSavedQuizResults(quizId) {
+            try {
+                const res = await fetch(quizId ? `/api/admin/quizzes/${quizId}/results/export` : '/api/admin/results/export', {
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                if (!res.ok) throw new Error('Unable to download results');
+                const url = URL.createObjectURL(await res.blob());
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `quiz_${quizId}_results.xlsx`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            } catch (err) { showToast(err.message, true); }
+        }
+
+        async function deleteSavedResult(resultId) {
+            if (!confirm('Permanently delete this student result and its saved answers? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`/api/admin/results/${resultId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${adminToken}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || data.detail || 'Unable to delete result');
+                await loadAdminResults();
+                loadAdminDashboardStats();
+                showToast('Result deleted.');
+            } catch (err) { showToast(err.message, true); }
         }
 
         async function handleAdminPasswordChange(e) {
@@ -4838,27 +4862,11 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             const currentPassword = (document.getElementById('settings-current-pwd') || document.getElementById('settings-current-password'))?.value;
             const newPassword = (document.getElementById('settings-new-pwd') || document.getElementById('settings-new-password'))?.value;
             try {
-                const res = await fetch('/api/admin/auth/change-password', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${adminToken}`
-                    },
-                    body: JSON.stringify({
-                        current_password: currentPassword,
-                        new_password: newPassword
-                    })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showToast("Administrator password updated successfully!");
-                    e.target.reset();
-                } else {
-                    showToast(data.detail || data.message || "Failed to update password", true);
-                }
-            } catch (err) {
-                showToast("Error updating password", true);
-            }
+                if (!window.firebaseChangePassword) throw new Error('Please sign in again.');
+                await window.firebaseChangePassword(currentPassword, newPassword);
+                showToast('Password updated.');
+                e.target.reset();
+            } catch (err) { showToast(err.message || 'Unable to update password', true); }
         }
 
         // ==================== LIVE PROCTORING & MONITORING ====================
@@ -5171,7 +5179,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 showToast("Admin authentication required for Excel export", true);
                 return;
             }
-            window.location.href = `/api/admin/results/export?token=${encodeURIComponent(adminToken)}`;
+            downloadSavedQuizResults(null);
         }
 
         // ==================== KEYBOARD & ANTI-CHEAT INTERCEPTORS ====================
@@ -5350,7 +5358,12 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
 
         // Initialize on load
         window.addEventListener('DOMContentLoaded', async () => {
-            const savedToken = localStorage.getItem('sbk_quiz_admin_token') || localStorage.getItem('quizmaster_admin_token');
+            await window.firebaseAuth?.authStateReady();
+            const firebaseUser = window.firebaseAuth?.currentUser;
+            const savedToken = firebaseUser && localStorage.getItem('sbk_quiz_firebase_role') === 'admin'
+                ? await firebaseUser.getIdToken()
+                : null;
+            adminToken = savedToken;
             if (savedToken) {
                 try {
                     const res = await fetch('/api/admin/auth/me', {

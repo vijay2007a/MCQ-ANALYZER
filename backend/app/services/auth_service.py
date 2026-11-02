@@ -95,6 +95,10 @@ class AuthService:
         if existing:
             raise ValueError("Admin with this email already exists")
         
+        from app.core.config import settings
+        if settings.DATABASE_BACKEND == "firestore":
+            from app.core.firebase import provision_firebase_admin
+            provision_firebase_admin(email.lower().strip(), password)
         hashed = hash_password(password)
         admin = Admin(
             email=email.lower().strip(),

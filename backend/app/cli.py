@@ -34,13 +34,16 @@ def main():
         sys.exit(1)
 
     # Ensure tables exist
-    Base.metadata.create_all(bind=engine)
+    if engine is not None:
+        Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
 
     try:
         if args.command == "init-db":
-            print("[SUCCESS] Database schema initialized successfully.")
+            if hasattr(db, "ping"):
+                db.ping()
+            print("[SUCCESS] Database connection initialized successfully.")
 
         elif args.command == "create-admin":
             if len(args.password) < 8:
@@ -72,6 +75,12 @@ def main():
                 print(f"[ERROR] No admin found with email '{args.email}'")
                 sys.exit(1)
             from app.core.security import hash_password
+            from app.core.config import settings
+            if settings.DATABASE_BACKEND == "firestore":
+                from firebase_admin import auth
+                from app.core.firebase import firebase_app
+                user = auth.get_user_by_email(args.email, app=firebase_app())
+                auth.update_user(user.uid, password=args.password, app=firebase_app())
             admin.password_hash = hash_password(args.password)
             db.commit()
             print(f"[SUCCESS] Password for admin '{admin.email}' reset successfully.")

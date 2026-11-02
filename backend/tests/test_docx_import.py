@@ -112,7 +112,8 @@ def test_docx_parser_malformed_missing_option():
     assert any("Question 8: Invalid ANSWER value" in err for err in result["errors"])
 
 
-def test_admin_api_parse_and_import_docx(client, admin_token):
+@pytest.mark.parametrize("publish_immediately", [False, True])
+def test_admin_api_parse_and_import_docx(client, admin_token, publish_immediately):
     """Test parse-docx and import-docx API endpoints."""
     sample_text = """
     QUIZ TITLE: Cloud Fundamentals
@@ -146,7 +147,7 @@ def test_admin_api_parse_and_import_docx(client, admin_token):
         "difficulty": "EASY",
         "time_per_question": 25,
         "maximum_attempts": 1,
-        "publish_immediately": True,
+        "publish_immediately": publish_immediately,
         "questions": parse_data["questions"],
     }
     import_res = client.post(
@@ -157,5 +158,21 @@ def test_admin_api_parse_and_import_docx(client, admin_token):
     assert import_res.status_code == 200
     imported_quiz = import_res.json()
     assert imported_quiz["title"] == "Cloud Fundamentals"
-    assert imported_quiz["status"] == "PUBLISHED"
+    assert imported_quiz["status"] == ("PUBLISHED" if publish_immediately else "DRAFT")
     assert imported_quiz["question_count"] == 1
+
+
+    # Publishing and refreshing must retain the imported questions and selection.
+    quiz_id = imported_quiz["id"]
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    published = client.post(f"/api/admin/quizzes/{quiz_id}/publish", headers=headers)
+    assert published.status_code == 200
+    assert published.json()["is_valid"] is True
+    for _ in range(2):
+        live = client.get(f"/api/admin/live-control?quiz_id={quiz_id}", headers=headers)
+        assert live.status_code == 200
+        assert live.json()["quiz"]["id"] == quiz_id
+        assert live.json()["quiz"]["status"] == "PUBLISHED"
+        questions = client.get(f"/api/admin/quizzes/{quiz_id}/questions", headers=headers)
+        assert questions.status_code == 200
+        assert len(questions.json()) == 1

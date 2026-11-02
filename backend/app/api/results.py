@@ -154,3 +154,27 @@ def get_admin_results(
         size=size,
         total_pages=total_pages,
     )
+
+
+@router.delete("/admin/results/{result_id}")
+def delete_admin_result(
+    result_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Delete a saved result and its answers; retain a session tombstone against replay."""
+    from app.models.result import QuizResult
+    from app.models.answer import QuizAttempt
+    from app.models.audit_log import AuditLog
+    result = db.query(QuizResult).filter(QuizResult.id == result_id).with_for_update().first()
+    if not result:
+        raise HTTPException(status_code=404, detail="Result not found")
+    session = result.session
+    if session:
+        session.status = "RESULT_DELETED"
+        db.query(QuizAttempt).filter(QuizAttempt.session_id == session.id).delete(synchronize_session=False)
+    db.delete(result)
+    db.add(AuditLog(event_type="RESULT_DELETED", actor_type="ADMIN",
+                    actor_id=str(current_admin.id), resource_type="RESULT", resource_id=str(result_id)))
+    db.commit()
+    return {"message": "Result deleted"}

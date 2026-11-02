@@ -393,6 +393,8 @@ class SessionService:
         user_agent: Optional[str] = None,
     ):
         now = utc_now()
+        if session.status == "RESULT_DELETED":
+            raise ValueError("This result has been deleted by an administrator")
         if session.status == "COMPLETED":
             res, rank = result_service.get_player_result_with_rank(db, session.id)
             return res, rank
@@ -489,7 +491,7 @@ class SessionService:
         # 1. Validate session status
         if session.status == "COMPLETED":
             raise ValueError("Quiz session has already been completed")
-        if session.status in ["EXPIRED", "ABANDONED"]:
+        if session.status in ["EXPIRED", "ABANDONED", "RESULT_DELETED"]:
             raise ValueError(f"Session is not active (status: {session.status})")
 
         # 2. Check session expiration

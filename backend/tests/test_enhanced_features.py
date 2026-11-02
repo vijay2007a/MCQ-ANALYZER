@@ -352,3 +352,9 @@ def test_result_publishing_toggle_and_live_control_and_excel_export(client, admi
     ]
     for col in required_columns:
         assert col in headers, f"Missing required Excel column: {col}"
+
+
+def test_live_control_missing_selection_does_not_switch_quiz(client, admin_headers, published_quiz):
+    response = client.get("/api/admin/live-control?quiz_id=999999", headers=admin_headers)
+    assert response.status_code == 404
+    assert response.json()["message"] == "Selected quiz not found"

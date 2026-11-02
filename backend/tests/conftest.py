@@ -12,7 +12,9 @@ from sqlalchemy.pool import StaticPool
 
 # Set test environment
 os.environ["ENVIRONMENT"] = "testing"
+os.environ["DATABASE_BACKEND"] = "sql"
 os.environ["RATE_LIMIT_ENABLED"] = "false"
+os.environ["INITIAL_ADMIN_PASSWORD"] = "TestBootstrapPassword123!"
 
 from app.core.database import Base, get_db
 from app.core.security import hash_password, create_access_token
@@ -34,6 +36,15 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(scope="function")
 def db():
+    if os.environ.get("TEST_DOCUMENT_STORE") == "1":
+        from app.core.firestore_store import FirestoreSession
+        from document_store_fake import MemoryDocumentStore
+        session = FirestoreSession(MemoryDocumentStore())
+        try:
+            yield session
+        finally:
+            session.close()
+        return
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
     try:
@@ -46,7 +57,11 @@ def db():
 @pytest.fixture(scope="function")
 def client(db):
     def override_get_db():
-        session = TestingSessionLocal()
+        if hasattr(db, "store"):
+            from app.core.firestore_store import FirestoreSession
+            session = FirestoreSession(db.store)
+        else:
+            session = TestingSessionLocal()
         try:
             yield session
         finally:

@@ -31,8 +31,9 @@ logger = logging.getLogger("sbk_quiz.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: ensure tables exist in dev/sqlite and apply safe additive column migrations
-    Base.metadata.create_all(bind=engine)
-    _run_safe_column_migrations(engine)
+    if settings.DATABASE_BACKEND == "sql":
+        Base.metadata.create_all(bind=engine)
+        _run_safe_column_migrations(engine)
     _ensure_default_admins()
     logger.info("SBK Quiz Analyzer backend successfully started.")
     yield
@@ -48,20 +49,28 @@ def _ensure_default_admins():
     from app.core.database import SessionLocal
     from app.models.admin import Admin
     from app.models.audit_log import AuditLog
+    from app.core.security import hash_password
     db = SessionLocal()
     try:
         # Record the one-time remediation in the same transaction as account changes.
         if db.query(AuditLog).filter(AuditLog.event_type == "ADMIN_ACCESS_LOCKDOWN_V2").first():
             return
+        initial_password = settings.INITIAL_ADMIN_PASSWORD
+        if initial_password is None or not initial_password.get_secret_value().strip():
+            raise RuntimeError("INITIAL_ADMIN_PASSWORD must be configured before initial administrator provisioning")
+        password_hash = hash_password(initial_password.get_secret_value())
         target_email = "admin123@gmail.com"
         db.query(Admin).update({Admin.is_active: False})
         admin = db.query(Admin).filter(Admin.email == target_email).first()
         if not admin:
             admin = Admin(email=target_email)
             db.add(admin)
-        admin.password_hash = '$argon2id$v=19$m=65536,t=3,p=4$GhzePARwF8B+GWohsr7URA$4D1Ldfj9ikFZVff51Km180EaB5Hztz79J+uUb8OC8/Q'
+        admin.password_hash = password_hash
         admin.role = "ADMIN"
         admin.is_active = True
+        if settings.DATABASE_BACKEND == "firestore":
+            from app.core.firebase import provision_firebase_admin
+            provision_firebase_admin(target_email, initial_password.get_secret_value())
         db.add(AuditLog(event_type="ADMIN_ACCESS_LOCKDOWN_V2", actor_type="SYSTEM",
                         details={"admin_email": target_email}))
         db.commit()

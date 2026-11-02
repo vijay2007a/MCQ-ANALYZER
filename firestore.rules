@@ -333,8 +333,8 @@ service cloud.firestore {
 
     // 1. Quizzes & Subcollections
     match /quizzes/{quizId} {
-      // Public/students can read published quizzes
-      allow read: if true;
+      // Quiz documents contain access codes; players use the backend API.
+      allow read: if isAdmin();
 
       // Authenticated faculty/admins can create, update, and delete quizzes
       allow create: if isAdmin() && isValidQuiz(request.resource.data);
@@ -343,7 +343,7 @@ service cloud.firestore {
 
       // Quiz questions subcollection
       match /questions/{questionId} {
-        allow read: if true;
+        allow read: if isAdmin();
         allow create: if isAdmin() && isValidQuestion(request.resource.data);
         allow update: if isAdmin() && isValidQuestion(request.resource.data);
         allow delete: if isAdmin();
@@ -351,7 +351,7 @@ service cloud.firestore {
 
       // Any other quiz configuration subcollections
       match /{subCollection}/{docId} {
-        allow read: if true;
+        allow read: if isAdmin();
         allow create, update: if isAdmin() && request.resource.data.size() <= 30;
         allow delete: if isAdmin();
       }
@@ -359,8 +359,8 @@ service cloud.firestore {
 
     // 2. Top-Level Questions Collection
     match /questions/{questionId} {
-      // Public/students can read questions
-      allow read: if true;
+      // Answer keys are private; players receive sanitized questions from the backend.
+      allow read: if isAdmin();
 
       // Authenticated admins can create, update, and delete questions
       allow create: if isAdmin() && isValidQuestion(request.resource.data);
@@ -408,10 +408,8 @@ service cloud.firestore {
 
     // 4. Quiz Results & Leaderboard
     match /quiz_results/{resultId} {
-      // Public read allowed only when register_number PII is absent/empty; owners and admins can always read
-      allow read: if isAdmin() ||
-                  isDocOwner() ||
-                  (!('register_number' in resource.data) || resource.data.register_number == null || resource.data.register_number == '');
+      // Results are private to the owning student and trusted administrators.
+      allow read: if isAdmin() || isDocOwner();
 
       // Result creation is reserved for the authoritative backend (Admin SDK bypasses rules)
       allow create: if false;
@@ -420,7 +418,7 @@ service cloud.firestore {
       allow update: if isAdmin() &&
                     isValidQuizResult(request.resource.data) &&
                     areImmutableFieldsUnchanged(['quiz_id', 'player_name', 'completed_at', 'created_at']);
-      allow delete: if isAdmin();
+      allow delete: if false;
     }
 
     // 5. Proctoring & Anti-Cheat Monitoring Events
@@ -460,6 +458,12 @@ service cloud.firestore {
                     uidNotModified() &&
                     areImmutableFieldsUnchanged(['uid', 'role', 'created_at']);
       allow delete: if false;
+    }
+
+    // Canonical application data is accessible only via the trusted backend.
+    // The Admin SDK uses IAM; browser Firebase identities cannot access this tree.
+    match /_quizmaster_backend/{document=**} {
+      allow read, write: if false;
     }
 
     // 7. Default Deny for all unlisted collections and documents

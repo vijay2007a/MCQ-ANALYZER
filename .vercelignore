@@ -6,6 +6,8 @@
 tests/
 backend/tests/
 *.log
+*.db
+*.db-*
 stitch_academic_quizmaster_pro/
 pytest.ini
-
+docs/

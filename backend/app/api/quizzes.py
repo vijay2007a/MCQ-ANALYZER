@@ -418,3 +418,47 @@ def import_docx_quiz(
     )
 
     return _build_quiz_admin_response(quiz)
+
+
+@router.post("/{quiz_id}/close")
+def close_quiz_and_export(
+    quiz_id: int,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Finalize saved attempts, prepare the export, and archive without deleting results."""
+    from datetime import datetime, timezone
+    from fastapi.responses import StreamingResponse
+    from app.models.quiz import Quiz
+    from app.models.quiz_session import QuizSession
+    from app.models.audit_log import AuditLog
+    from app.services.result_service import result_service
+    from app.services.export_service import export_service
+
+    quiz = db.query(Quiz).filter(Quiz.id == quiz_id, Quiz.is_deleted == False).with_for_update().first()
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    try:
+        sessions = db.query(QuizSession).filter(
+            QuizSession.quiz_id == quiz_id, QuizSession.status.in_(["ACTIVE", "EXPIRED"])
+        ).with_for_update().all()
+        for session in sessions:
+            session.status = "COMPLETED"
+            session.last_activity_at = datetime.now(timezone.utc)
+            result_service.create_result_from_session(db, session, commit=False)
+        quiz.status = "ARCHIVED"
+        quiz.updated_at = datetime.now(timezone.utc)
+        db.flush()
+        # Construct the complete file before committing the archive operation.
+        excel = export_service.generate_quiz_results_excel(db, quiz_id=quiz_id)
+        db.add(AuditLog(event_type="QUIZ_CLOSED", actor_type="ADMIN",
+                        actor_id=str(current_admin.id), resource_type="QUIZ", resource_id=str(quiz_id)))
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return StreamingResponse(
+        excel,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="quiz_{quiz_id}_results.xlsx"'},
+    )

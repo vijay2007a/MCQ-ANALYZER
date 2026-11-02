@@ -1,3 +1,6 @@
+import pytest
+from pydantic import SecretStr
+
 def test_admin_login_success(client, test_admin):
     response = client.post(
         "/api/admin/auth/login",
@@ -81,18 +84,46 @@ def test_legacy_admin_tokens_are_rejected(client, test_admin):
 
 def test_admin_lockdown_provisions_account_and_preserves_password_changes(db, test_admin, monkeypatch):
     from app.core import database
+    from app.core.config import settings
     from app.core.security import hash_password, verify_password
     from app.main import _ensure_default_admins
     from app.models.admin import Admin
     monkeypatch.setattr(database, "SessionLocal", lambda: db)
+    monkeypatch.setattr(settings, "INITIAL_ADMIN_PASSWORD", SecretStr("ConfiguredBootstrap123!"))
     legacy_id = test_admin.id
     _ensure_default_admins()
     admin = db.query(Admin).filter(Admin.email == "admin123@gmail.com").one()
     assert admin.is_active
-    assert verify_password("12345678", admin.password_hash)
+    assert verify_password("ConfiguredBootstrap123!", admin.password_hash)
+    assert not verify_password("12345678", admin.password_hash)
     assert not db.get(Admin, legacy_id).is_active
     admin.password_hash = hash_password("ChangedPassword123!")
     db.commit()
+    monkeypatch.setattr(settings, "INITIAL_ADMIN_PASSWORD", None)
     _ensure_default_admins()
     admin = db.query(Admin).filter(Admin.email == "admin123@gmail.com").one()
     assert verify_password("ChangedPassword123!", admin.password_hash)
+
+
+@pytest.mark.parametrize("password", [None, "", "   "])
+def test_initial_admin_password_required_at_startup(db, test_admin, monkeypatch, password):
+    from fastapi.testclient import TestClient
+    from app.core import database
+    from app.core.config import settings
+    from app.models.admin import Admin
+    from app.models.audit_log import AuditLog
+    import app.main as main
+    monkeypatch.setattr(database, "SessionLocal", lambda: db)
+    if hasattr(db, "store"):
+        monkeypatch.setattr(main.Base.metadata, "create_all", lambda **kwargs: None)
+        monkeypatch.setattr(main, "_run_safe_column_migrations", lambda *args: None)
+    else:
+        monkeypatch.setattr(main, "engine", db.get_bind())
+    monkeypatch.setattr(settings, "INITIAL_ADMIN_PASSWORD", SecretStr(password) if password is not None else None)
+    legacy_id = test_admin.id
+    with pytest.raises(RuntimeError, match="INITIAL_ADMIN_PASSWORD"):
+        with TestClient(main.app):
+            pytest.fail("Startup must fail without an initial admin password")
+    assert db.get(Admin, legacy_id).is_active
+    assert db.query(Admin).filter(Admin.email == "admin123@gmail.com").first() is None
+    assert db.query(AuditLog).filter(AuditLog.event_type == "ADMIN_ACCESS_LOCKDOWN_V2").count() == 0

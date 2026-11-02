@@ -30,6 +30,15 @@ def get_current_admin(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    from app.core.config import settings
+    if settings.DATABASE_BACKEND == "firestore":
+        from app.core.firebase import verify_admin_identity
+        identity = verify_admin_identity(raw_token)
+        admin = db.query(Admin).filter(Admin.email == identity["email"].lower().strip()).first()
+        if not admin or not admin.is_active:
+            raise HTTPException(status_code=403, detail="Administrator account is not authorized")
+        return admin
+
     payload = decode_access_token(raw_token)
     if not payload or payload.get("admin_auth_version") != 2:
         raise HTTPException(

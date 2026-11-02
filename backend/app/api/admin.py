@@ -165,10 +165,12 @@ def get_live_quiz_control_data(
     Real-time monitoring data for the Admin Live Quiz Control Room.
     Reports joined students, currently attempting, submitted, disconnected, live submissions, and live leaderboard.
     """
-    quizzes = db.query(Quiz).filter(Quiz.is_deleted == False).order_by(Quiz.created_at.desc()).all()
+    quizzes = db.query(Quiz).filter(Quiz.is_deleted == False, Quiz.status != "ARCHIVED").order_by(Quiz.created_at.desc()).all()
     target_quiz = None
     if quiz_id:
-        target_quiz = db.query(Quiz).filter(Quiz.id == quiz_id, Quiz.is_deleted == False).first()
+        target_quiz = db.query(Quiz).filter(Quiz.id == quiz_id, Quiz.is_deleted == False, Quiz.status != "ARCHIVED").first()
+        if not target_quiz:
+            raise HTTPException(status_code=404, detail="Selected quiz not found")
     if not target_quiz and quizzes:
         published_list = [q for q in quizzes if q.status == "PUBLISHED"]
         target_quiz = published_list[0] if published_list else quizzes[0]

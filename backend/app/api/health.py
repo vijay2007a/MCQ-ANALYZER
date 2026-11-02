@@ -13,7 +13,10 @@ def health_check(db: Session = Depends(get_db)):
     """
     db_status = "healthy"
     try:
-        db.execute(text("SELECT 1"))
+        if hasattr(db, "ping"):
+            db.ping()
+        else:
+            db.execute(text("SELECT 1"))
     except Exception:
         db_status = "unreachable"
 

@@ -10,10 +10,12 @@ from app.models.quiz import Quiz
 
 class ResultService:
     @staticmethod
-    def create_result_from_session(db: Session, session: QuizSession) -> Optional[QuizResult]:
+    def create_result_from_session(db: Session, session: QuizSession, commit: bool = True) -> Optional[QuizResult]:
         """
         Server-side calculation and storage of final quiz results.
         """
+        if session.status == "RESULT_DELETED":
+            return None
         existing = db.query(QuizResult).filter(QuizResult.session_id == session.id).first()
         if existing:
             return existing
@@ -67,8 +69,11 @@ class ResultService:
             completed_at=datetime.now(timezone.utc),
         )
         db.add(result)
-        db.commit()
-        db.refresh(result)
+        if commit:
+            db.commit()
+            db.refresh(result)
+        else:
+            db.flush()
         return result
 
     @staticmethod
