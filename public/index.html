@@ -2209,6 +2209,24 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
         let remainingSeconds = 30;
         let isSubmitting = false;
 
+        // Serialize a student's writes (autosave, proctoring events, finish) so they
+        // never race each other on the server; retry briefly on 409 conflicts.
+        let sessionWriteQueue = Promise.resolve();
+        function sessionWrite(url, options) {
+            const run = async () => {
+                let res;
+                for (let attempt = 0; attempt < 4; attempt++) {
+                    res = await fetch(url, options);
+                    if (res.status !== 409) return res;
+                    await new Promise(r => setTimeout(r, 150 * (attempt + 1) + Math.random() * 150));
+                }
+                return res;
+            };
+            const result = sessionWriteQueue.then(run, run);
+            sessionWriteQueue = result.catch(() => {});
+            return result;
+        }
+
         // Anti-Cheating & Live Proctoring Telemetry State
         let allMonitoringEvents = [];
         let monitoredSessionsMap = {};
@@ -2273,7 +2291,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             };
 
             // 1. Post to Server Authoritative Backend Endpoint
-            fetch(`/api/player/sessions/${activeSession.sessionId}/event`, {
+            sessionWrite(`/api/player/sessions/${activeSession.sessionId}/event`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3190,7 +3208,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             if (badgeIcon) badgeIcon.textContent = "sync";
 
             try {
-                const res = await fetch(`/api/player/sessions/${activeSession.sessionId}/save-draft`, {
+                const res = await sessionWrite(`/api/player/sessions/${activeSession.sessionId}/save-draft`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -3250,7 +3268,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             if (finishBtn) finishBtn.disabled = true;
 
             try {
-                const res = await fetch(`/api/player/sessions/${activeSession.sessionId}/finish`, {
+                const res = await sessionWrite(`/api/player/sessions/${activeSession.sessionId}/finish`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -3478,7 +3496,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                         if (currentView === 'admin' && currentAdminTab === 'live') {
                             loadLiveControlRoom();
                         }
-                    }, 5000);
+                    }, 10000);
                 }
             }
             if (tabName === 'results') loadAdminResults();

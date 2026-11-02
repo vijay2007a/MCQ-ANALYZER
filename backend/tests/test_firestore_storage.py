@@ -121,3 +121,89 @@ def test_firebase_revoked_token_verification_is_required(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         firebase.verify_admin_identity("revoked")
     assert exc.value.status_code == 401
+
+
+
+def test_independent_documents_do_not_conflict():
+    """Writers touching different documents of one collection must both succeed."""
+    store = MemoryDocumentStore()
+    seed = FirestoreSession(store)
+    a, b = Admin(email="a@test.com", password_hash="h"), Admin(email="b@test.com", password_hash="h")
+    seed.add_all([a, b])
+    seed.commit()
+    first, second = FirestoreSession(store), FirestoreSession(store)
+    first.get(Admin, a.id).password_hash = "first"
+    second.get(Admin, b.id).password_hash = "second"
+    first.commit()
+    second.commit()
+    check = FirestoreSession(store)
+    assert check.get(Admin, a.id).password_hash == "first"
+    assert check.get(Admin, b.id).password_hash == "second"
+
+
+def test_forty_concurrent_inserts_all_succeed():
+    from concurrent.futures import ThreadPoolExecutor
+    store = MemoryDocumentStore()
+
+    def insert(i):
+        s = FirestoreSession(store)
+        s.add(Admin(email=f"student{i}@test.com", password_hash="h"))
+        s.commit()
+
+    with ThreadPoolExecutor(max_workers=40) as pool:
+        list(pool.map(insert, range(40)))
+    assert FirestoreSession(store).query(Admin).count() == 40
+
+
+def test_unique_value_can_move_between_documents_in_one_commit():
+    store = MemoryDocumentStore()
+    seed = FirestoreSession(store)
+    a, b = Admin(email="x@test.com", password_hash="h"), Admin(email="y@test.com", password_hash="h")
+    seed.add_all([a, b])
+    seed.commit()
+    swap = FirestoreSession(store)
+    swap.get(Admin, a.id).email = "y@test.com"
+    swap.get(Admin, b.id).email = "x@test.com"
+    swap.commit()
+    after = FirestoreSession(store)
+    assert after.get(Admin, a.id).email == "y@test.com"
+    # Released values are reusable and still protected afterwards.
+    dup = FirestoreSession(store)
+    dup.add(Admin(email="x@test.com", password_hash="h"))
+    with pytest.raises(IntegrityError):
+        dup.commit()
+
+
+def test_deleted_unique_value_is_released():
+    store = MemoryDocumentStore()
+    s = FirestoreSession(store)
+    admin = Admin(email="gone@test.com", password_hash="h")
+    s.add(admin)
+    s.commit()
+    d = FirestoreSession(store)
+    d.delete(d.get(Admin, admin.id))
+    d.commit()
+    again = FirestoreSession(store)
+    again.add(Admin(email="gone@test.com", password_hash="h"))
+    again.commit()
+    assert FirestoreSession(store).query(Admin).count() == 1
+
+
+def test_reads_are_cached_within_a_request():
+    store = MemoryDocumentStore()
+    s = FirestoreSession(store)
+    admin = Admin(email="cache@test.com", password_hash="h")
+    s.add(admin)
+    s.commit()
+    calls = {"n": 0}
+    original_read = store.read
+
+    def counting_read(*args):
+        calls["n"] += 1
+        return original_read(*args)
+
+    store.read = counting_read
+    reader = FirestoreSession(store)
+    for _ in range(5):
+        assert reader.get(Admin, admin.id).email == "cache@test.com"
+    assert calls["n"] == 1

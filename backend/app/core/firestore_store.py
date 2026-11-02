@@ -1,14 +1,20 @@
 """Firestore document persistence for the application's existing domain services.
 
 Only the query operations used by this project are supported; this is not a SQL
-engine. Documents and query revisions live in a server-only namespace. Queries
-push one equality predicate into Firestore and evaluate remaining filters and
-sorting on the server. Collection revisions serialize overlapping writes and
-prevent lost updates and duplicate submissions across function instances.
+engine. Documents live in a server-only namespace. Queries push one equality
+predicate into Firestore and evaluate remaining filters and sorting on the
+server.
+
+Concurrency is per document: a commit transactionally re-reads only the
+documents it writes and aborts if any changed since they were loaded, so
+unrelated writers (e.g. different students) never contend with each other.
+Unique constraints are enforced with small index documents under ``_unique``
+that are claimed inside the same transaction.
 """
 from collections import namedtuple
 from copy import deepcopy
 from datetime import datetime, timezone
+import hashlib
 import operator
 import re
 import secrets
@@ -24,6 +30,31 @@ class StorageConflict(HTTPException):
         super().__init__(409, "Data changed during this request. Please retry.")
 
 
+def normalize(value):
+    """Comparable form of stored values (Firestore returns aware UTC datetimes)."""
+    if isinstance(value, datetime):
+        value = value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+        return (value.year, value.month, value.day, value.hour, value.minute, value.second, value.microsecond)
+    if isinstance(value, dict):
+        return {k: normalize(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [normalize(v) for v in value]
+    return value
+
+
+def unique_key(table, fields, values):
+    raw = repr((table, tuple(fields), tuple(normalize(v) for v in values)))
+    return f"{table}.{hashlib.sha256(raw.encode()).hexdigest()}"
+
+
+def unique_field_sets(model):
+    """Unique constraints plus ``unique=True`` columns (SQLAlchemy keeps those
+    on the column rather than in ``Table.constraints``)."""
+    sets = [list(c.columns.keys()) for c in model.__table__.constraints if isinstance(c, UniqueConstraint)]
+    sets += [[c.key] for c in model.__table__.columns if c.unique and [c.key] not in sets]
+    return sets
+
+
 class FirestoreStore:
     def __init__(self, client):
         self.client = client
@@ -31,10 +62,6 @@ class FirestoreStore:
 
     def collection(self, table):
         return self.root.collection(table)
-
-    def revision(self, table):
-        snap = self.root.collection("_revisions").document(table).get()
-        return (snap.to_dict() or {}).get("version", 0)
 
     def read(self, table, key):
         snap = self.collection(table).document(str(key)).get()
@@ -47,28 +74,40 @@ class FirestoreStore:
             query = query.where(filter=FieldFilter(equality[0], "==", equality[1]))
         return [snap.to_dict() for snap in query.stream()]
 
-    def commit(self, revisions, changes):
+    def commit(self, changes, expected, claims, releases):
+        """Atomically apply ``changes`` if every written document still equals
+        ``expected`` (None = must not exist) and every unique claim is free.
+        ``claims`` maps unique-index id -> (new owner id, owner releasing it in
+        this commit or None)."""
         from google.cloud import firestore
         transaction = self.client.transaction()
+        doc_refs = {key: self.collection(key[0]).document(str(key[1])) for key in changes}
+        claim_refs = {uid: self.root.collection("_unique").document(uid) for uid in claims}
 
         @firestore.transactional
         def save(tx):
             # All reads precede all writes, as required by Firestore transactions.
-            for table, expected in revisions.items():
-                ref = self.root.collection("_revisions").document(table)
-                snap = ref.get(transaction=tx)
-                if (snap.to_dict() or {}).get("version", 0) != expected:
+            refs = list(doc_refs.values()) + list(claim_refs.values())
+            snaps = {snap.reference.path: snap for snap in self.client.get_all(refs, transaction=tx)}
+            for key, ref in doc_refs.items():
+                snap = snaps.get(ref.path)
+                current = snap.to_dict() if snap is not None and snap.exists else None
+                if normalize(current) != normalize(expected[key]):
                     raise StorageConflict()
-            touched = set()
-            for (table, key), data in changes.items():
-                touched.add(table)
-                ref = self.collection(table).document(str(key))
+            for uid, ref in claim_refs.items():
+                snap = snaps.get(ref.path)
+                owner = (snap.to_dict() or {}).get("id") if snap is not None and snap.exists else None
+                if owner is not None and owner not in claims[uid]:
+                    raise IntegrityError(None, None, ValueError("Duplicate document key"))
+            for key, data in changes.items():
                 if data is None:
-                    tx.delete(ref)
+                    tx.delete(doc_refs[key])
                 else:
-                    tx.set(ref, data)
-            for table in touched:
-                tx.set(self.root.collection("_revisions").document(table), {"version": revisions[table] + 1})
+                    tx.set(doc_refs[key], data)
+            for uid in releases:
+                tx.delete(self.root.collection("_unique").document(uid))
+            for uid, ref in claim_refs.items():
+                tx.set(ref, {"id": claims[uid][0]})
         save(transaction)
 
     def ping(self):
@@ -146,7 +185,7 @@ class DocumentQuery:
         return self
 
     def with_for_update(self):
-        # The unit of work validates read revisions atomically at commit.
+        # Written documents are re-validated atomically at commit.
         return self
 
     def _rows(self):
@@ -227,12 +266,10 @@ class FirestoreSession:
             from app.core.firebase import firestore_client
             store = FirestoreStore(firestore_client())
         self.store = store
-        self.objects, self.originals, self.revisions = {}, {}, {}
+        self.objects, self.originals = {}, {}
         self.deleted = set()
-
-    def _observe(self, table):
-        if table not in self.revisions:
-            self.revisions[table] = self.store.revision(table)
+        # Per-request read cache: (table, equality) -> list of raw documents.
+        self._fetch_cache = {}
 
     def _data(self, obj):
         return {column.key: deepcopy(getattr(obj, column.key)) for column in inspect(type(obj)).columns}
@@ -246,14 +283,23 @@ class FirestoreSession:
             self.originals[key] = deepcopy(data)
         return self.objects[key]
 
+    def _fetch(self, table, equality):
+        cache_key = (table, equality if equality is None else (equality[0], repr(normalize(equality[1]))))
+        if cache_key not in self._fetch_cache:
+            if equality and equality[0] == "id":
+                data = self.store.read(table, equality[1])
+                self._fetch_cache[cache_key] = [data] if data else []
+            else:
+                self._fetch_cache[cache_key] = self.store.scan(table, equality)
+        return self._fetch_cache[cache_key]
+
+    def _invalidate(self, tables):
+        for cache_key in [k for k in self._fetch_cache if k[0] in tables]:
+            del self._fetch_cache[cache_key]
+
     def rows(self, model, equality=None):
         table = model.__tablename__
-        self._observe(table)
-        if equality and equality[0] == "id":
-            data = self.store.read(table, equality[1])
-            fetched = [data] if data else []
-        else:
-            fetched = self.store.scan(table, equality)
+        fetched = self._fetch(table, equality)
         rows = {data["id"]: self._load(model, data) for data in fetched}
         # Include local additions/changes and exclude pending deletions.
         for (name, key), obj in self.objects.items():
@@ -277,10 +323,8 @@ class FirestoreSession:
         if obj.id is None:
             obj.id = secrets.randbelow(2**53 - 1) + 1
         key = (obj.__tablename__, obj.id)
-        self._observe(key[0])
         if key not in self.objects:
-            if self.store.read(*key) is not None:
-                raise StorageConflict()
+            # Existence is verified atomically at commit (expected original = None).
             self.originals[key] = None
         obj._document_session = self
         self.objects[key] = obj
@@ -326,37 +370,11 @@ class FirestoreSession:
                 changes[key] = data
         if not changes:
             return
-        # Enforce existing model constraints against the current collection. The
-        # revision check makes this validation atomic with concurrent writers.
-        models = {type(self.objects[key]) for key in changes}
-        for model in models:
-            rows = self.rows(model)
-            constraints = [list(c.columns.keys()) for c in model.__table__.constraints if isinstance(c, UniqueConstraint)]
-            for fields in constraints:
-                seen = set()
-                for row in rows:
-                    values = tuple(getattr(row, field) for field in fields)
-                    if None in values:
-                        continue
-                    if values in seen:
-                        raise IntegrityError(None, None, ValueError("Duplicate document key"))
-                    seen.add(values)
-            for row in rows:
-                if (row.__tablename__, row.id) not in changes:
-                    continue
-                for column in inspect(model).columns:
-                    for foreign in column.foreign_keys:
-                        value = getattr(row, column.key)
-                        if value is not None:
-                            from app.core.database import Base
-                            target = next(m.class_ for m in Base.registry.mappers if m.local_table.name == foreign.column.table.name)
-                            if self.get(target, value) is None:
-                                raise IntegrityError(None, None, ValueError("Missing referenced document"))
-        self.store.commit(self.revisions, changes)
-        # Keep observed objects and revisions together, so a later commit in the
-        # same request cannot overwrite an intervening request's newer values.
-        for table in {key[0] for key in changes}:
-            self.revisions[table] += 1
+        claims, releases = self._unique_claims(changes)
+        self._check_foreign_keys(changes)
+        expected = {key: self.originals.get(key) for key in changes}
+        self.store.commit(changes, expected, claims, releases)
+        self._invalidate({key[0] for key in changes})
         for key, data in changes.items():
             if data is None:
                 self.objects.pop(key, None)
@@ -364,6 +382,57 @@ class FirestoreSession:
             else:
                 self.originals[key] = deepcopy(data)
         self.deleted.clear()
+
+    def _unique_claims(self, changes):
+        """Unique index documents to claim/release; also rejects legacy duplicates
+        (records written before index documents existed) with a targeted query."""
+        claims, released_by = {}, {}
+        for key, data in changes.items():
+            table, doc_id = key
+            model = type(self.objects[key])
+            original = self.originals.get(key)
+            for fields in unique_field_sets(model):
+                new = None if data is None else tuple(data.get(f) for f in fields)
+                old = None if original is None else tuple(original.get(f) for f in fields)
+                if new is not None and None in new:
+                    new = None
+                if old is not None and None in old:
+                    old = None
+                if normalize(new) == normalize(old):
+                    continue
+                if old is not None:
+                    released_by[unique_key(table, fields, old)] = doc_id
+                if new is None:
+                    continue
+                uid = unique_key(table, fields, new)
+                if claims.get(uid, doc_id) != doc_id:
+                    raise IntegrityError(None, None, ValueError("Duplicate document key"))
+                claims[uid] = doc_id
+                for row in self.store.scan(table, (fields[0], new[0])):
+                    if row["id"] != doc_id and (table, row["id"]) not in self.deleted and \
+                            all(normalize(row.get(f)) == normalize(v) for f, v in zip(fields, new)):
+                        other = self.objects.get((table, row["id"]))
+                        # A row being changed away from this value in the same commit is fine.
+                        if other is None or tuple(getattr(other, f) for f in fields) == new:
+                            raise IntegrityError(None, None, ValueError("Duplicate document key"))
+        # A claim may take over a value released by another document in this commit.
+        claim_map = {uid: (doc_id, released_by.get(uid)) for uid, doc_id in claims.items()}
+        return claim_map, set(released_by) - set(claims)
+
+    def _check_foreign_keys(self, changes):
+        from app.core.database import Base
+        for key, data in changes.items():
+            if data is None:
+                continue
+            original = self.originals.get(key) or {}
+            for column in inspect(type(self.objects[key])).columns:
+                value = data.get(column.key)
+                if value is None or value == original.get(column.key):
+                    continue
+                for foreign in column.foreign_keys:
+                    target = next(m.class_ for m in Base.registry.mappers if m.local_table.name == foreign.column.table.name)
+                    if self.get(target, value) is None:
+                        raise IntegrityError(None, None, ValueError("Missing referenced document"))
 
     def refresh(self, obj):
         # A committed object already contains exactly the persisted values.
