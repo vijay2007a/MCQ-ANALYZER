@@ -1,0 +1,11 @@
+.git
+.gitignore
+.pytest_cache
+.vscode
+.kilo
+tests/
+backend/tests/
+*.log
+stitch_academic_quizmaster_pro/
+pytest.ini
+

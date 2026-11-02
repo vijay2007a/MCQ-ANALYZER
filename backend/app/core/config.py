@@ -40,6 +40,15 @@ class Settings(BaseSettings):
         "https://sbk-quiz-analyzer.web.app",
     ]
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_database_url(cls, v: Optional[str]) -> str:
+        if v and v != "sqlite:///./quizmaster.db":
+            return v
+        if os.environ.get("VERCEL"):
+            return "sqlite:////tmp/quizmaster.db"
+        return v or "sqlite:///./quizmaster.db"
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:

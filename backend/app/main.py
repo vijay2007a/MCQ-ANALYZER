@@ -207,6 +207,15 @@ app.include_router(leaderboard_router, prefix=settings.API_V1_STR)
 app.include_router(exports_router, prefix=settings.API_V1_STR)
 app.include_router(audit_router, prefix=settings.API_V1_STR)
 
+@app.get("/api", tags=["System"])
+def api_root():
+    return {
+        "service": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "status": "online",
+        "health": f"{settings.API_V1_STR}/health",
+    }
+
 # Static Files & Frontend SPA Mount
 static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 if os.path.exists(static_dir):
@@ -220,6 +229,20 @@ if os.path.exists(static_dir):
     @app.get("/quizzes")
     def serve_frontend():
         index_file = os.path.join(static_dir, "index.html")
+        if not os.path.exists(index_file):
+            index_file = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "public", "index.html"))
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+        return {"service": settings.PROJECT_NAME, "version": settings.VERSION}
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def serve_spa_fallback(full_path: str):
+        # Don't hijack /api calls that were genuinely 404
+        if full_path.startswith("api/"):
+            return JSONResponse(status_code=404, content={"detail": "API endpoint not found"})
+        index_file = os.path.join(static_dir, "index.html")
+        if not os.path.exists(index_file):
+            index_file = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "public", "index.html"))
         if os.path.exists(index_file):
             return FileResponse(index_file)
         return {"service": settings.PROJECT_NAME, "version": settings.VERSION}

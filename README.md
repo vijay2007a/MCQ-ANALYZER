@@ -78,3 +78,4 @@ A modern, full-stack MCQ Quiz Management & Real-Time Assessment Platform built f
    ```bash
    python -m pytest backend/tests/ -v
    ```
+

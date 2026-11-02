@@ -63,6 +63,10 @@ Thumbs.db
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+*.db
 *.db-journal
 *.db-wal
 *.db-shm
+
+.vercel
+.env*
