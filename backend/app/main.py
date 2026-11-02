@@ -41,36 +41,30 @@ async def lifespan(app: FastAPI):
 
 
 def _ensure_default_admins():
-    """Ensure the primary admin account (vijay2007a@gmail.com / 12345678) exists and is active."""
+    """Provision the designated admin once; preserve subsequent password changes.
+
+    Disable legacy accounts admitted by the former public Firebase signup path.
+    """
     from app.core.database import SessionLocal
     from app.models.admin import Admin
-    from app.core.security import hash_password, verify_password
+    from app.models.audit_log import AuditLog
     db = SessionLocal()
     try:
-        target_email = "vijay2007a@gmail.com"
-        target_pass = "12345678"
+        # Record the one-time remediation in the same transaction as account changes.
+        if db.query(AuditLog).filter(AuditLog.event_type == "ADMIN_ACCESS_LOCKDOWN_V2").first():
+            return
+        target_email = "admin123@gmail.com"
+        db.query(Admin).update({Admin.is_active: False})
         admin = db.query(Admin).filter(Admin.email == target_email).first()
         if not admin:
-            admin = Admin(
-                email=target_email,
-                password_hash=hash_password(target_pass),
-                role="ADMIN",
-                is_active=True,
-            )
+            admin = Admin(email=target_email)
             db.add(admin)
-            db.commit()
-        else:
-            updated = False
-            if not verify_password(target_pass, admin.password_hash):
-                admin.password_hash = hash_password(target_pass)
-                updated = True
-            if not admin.is_active:
-                admin.is_active = True
-                updated = True
-            if updated:
-                db.commit()
-    except Exception as e:
-        logger.warning(f"Default admin provisioning notice: {e}")
+        admin.password_hash = '$argon2id$v=19$m=65536,t=3,p=4$GhzePARwF8B+GWohsr7URA$4D1Ldfj9ikFZVff51Km180EaB5Hztz79J+uUb8OC8/Q'
+        admin.role = "ADMIN"
+        admin.is_active = True
+        db.add(AuditLog(event_type="ADMIN_ACCESS_LOCKDOWN_V2", actor_type="SYSTEM",
+                        details={"admin_email": target_email}))
+        db.commit()
     finally:
         db.close()
 

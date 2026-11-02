@@ -31,7 +31,7 @@ def get_current_admin(
         )
 
     payload = decode_access_token(raw_token)
-    if not payload:
+    if not payload or payload.get("admin_auth_version") != 2:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",

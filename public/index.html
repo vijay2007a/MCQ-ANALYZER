@@ -358,7 +358,7 @@
                         </div>
                         <div>
                             <h2 id="admin-auth-heading" class="font-serif text-xl font-bold text-slate-900 leading-tight">Faculty / Admin Login</h2>
-                            <p id="admin-auth-subheading" class="text-xs text-slate-500 mt-0.5">Sign in with Email/Password or Google.</p>
+                            <p id="admin-auth-subheading" class="text-xs text-slate-500 mt-0.5">Sign in with your administrator email and password.</p>
                         </div>
                     </div>
                 </div>
@@ -390,34 +390,7 @@
                         <span class="material-symbols-outlined text-base">login</span>
                     </button>
 
-                    <div class="text-center">
-                        <button type="button" id="admin-auth-mode-toggle" onclick="toggleAdminAuthMode()" class="text-xs font-semibold text-primary hover:underline">
-                            Need a faculty account? Create one with Email/Password
-                        </button>
-                    </div>
-
-                    <div class="relative flex py-1 items-center">
-                        <div class="flex-grow border-t border-slate-200"></div>
-                        <span class="flex-shrink mx-3 text-[11px] font-semibold uppercase text-slate-400">or</span>
-                        <div class="flex-grow border-t border-slate-200"></div>
-                    </div>
-
-                    <button type="button" id="admin-google-btn" onclick="handleGoogleSignIn('admin')" class="w-full bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 border border-slate-300 py-3 rounded-xl font-semibold text-xs sm:text-sm shadow-sm transition flex items-center justify-center space-x-2.5">
-                        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                            <path fill="#34A853" d="M12 24c3.3 0 6.08-1.09 8.1-2.96l-3.88-3.05c-1.08.72-2.45 1.16-4.22 1.16-3.24 0-5.98-2.18-6.96-5.11H1.04v3.14C3.05 21.2 7.21 24 12 24z"/>
-                            <path fill="#FBBC05" d="M5.04 14.04c-.25-.72-.39-1.5-.39-2.3s.14-1.58.39-2.3V6.3H1.04C.38 7.61 0 9.1 0 11.74s.38 4.13 1.04 5.44l4-3.14z"/>
-                            <path fill="#EA4335" d="M12 4.75c1.8 0 3.41.62 4.68 1.84l3.51-3.51C18.07 1.19 15.3 0 12 0 7.21 0 3.05 2.8 1.04 6.3l4 3.14c.98-2.93 3.72-5.11 6.96-5.11z"/>
-                        </svg>
-                        <span>Sign in with Google</span>
-                    </button>
-
-                    <div class="pt-1 text-center">
-                        <span class="inline-flex items-center space-x-1 text-[11px] text-slate-400 font-medium">
-                            <span class="material-symbols-outlined text-xs text-amber-500">verified</span>
-                            <span>Firebase Auth &amp; Cloud Firestore (`mcq-analyzer-16a47`)</span>
-                        </span>
-                    </div>
+                    <p class="text-center text-xs text-slate-500">Admin access is restricted to provisioned accounts.</p>
                 </form>
             </div>
         </section>
@@ -2136,7 +2109,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
         onAuthStateChanged(firebaseAuth, async (user) => {
             if (user) {
                 window.firebaseUser = user;
-                const intendedRole = localStorage.getItem('sbk_quiz_firebase_role') || 'student';
+
 
                 // Persist non-privileged user profile in Firestore `users/{uid}` without client-assigned admin or role mutation
                 try {
@@ -2158,44 +2131,13 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                     console.warn("Firestore user profile sync notice:", fsErr);
                 }
 
-                if (intendedRole === 'student') {
-                    // Student signed in via Google
-                    if (!studentName) {
-                        studentName = user.displayName || (user.email ? user.email.split('@')[0] : 'Student');
-                        localStorage.setItem('sbk_quiz_student_name', studentName);
-                        localStorage.setItem('quizmaster_student_name', studentName);
-                    }
-                    updateNavHeader();
-                    return;
+                // Firebase authentication grants student access only.
+                if (!studentName) {
+                    studentName = user.displayName || (user.email ? user.email.split('@')[0] : 'Student');
+                    localStorage.setItem('sbk_quiz_student_name', studentName);
+                    localStorage.setItem('quizmaster_student_name', studentName);
                 }
-
-                adminEmail = user.email || user.displayName || 'Admin';
-                localStorage.setItem('sbk_quiz_admin_email', adminEmail);
-                
-                try {
-                    const idToken = await user.getIdToken();
-                    localStorage.setItem('sbk_quiz_firebase_token', idToken);
-                    
-                    const res = await fetch('/api/admin/auth/firebase-login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: user.email, uid: user.uid, id_token: idToken })
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        adminToken = data.access_token;
-                        localStorage.setItem('sbk_quiz_admin_token', adminToken);
-                        localStorage.setItem('quizmaster_admin_token', adminToken);
-                    }
-                } catch (err) {
-                    console.warn("Backend auth sync notice:", err);
-                }
-
                 updateNavHeader();
-                initRealtimeFirestoreProctoring();
-                if (currentView === 'admin' || window.location.hash === '#admin') {
-                    initAdminView();
-                }
             } else {
                 window.firebaseUser = null;
                 updateNavHeader();
@@ -2225,10 +2167,9 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
         let allAdminResultsCache = [];
         let studentName = localStorage.getItem('sbk_quiz_student_name') || localStorage.getItem('quizmaster_student_name') || null;
         let studentRegNo = localStorage.getItem('sbk_quiz_student_regno') || '';
-        let adminToken = localStorage.getItem('sbk_quiz_admin_token') || localStorage.getItem('quizmaster_admin_token') || null;
+        let adminToken = null; // Restored only after server verification.
         let adminEmail = localStorage.getItem('sbk_quiz_admin_email') || localStorage.getItem('quizmaster_admin_email') || null;
         let activeRoleTab = 'student';
-        let isAdminSignUpMode = false;
         
         let publicQuizzesCache = [];
         let leaderboardItemsCache = [];
@@ -2433,27 +2374,12 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             }
         }
 
-        function toggleAdminAuthMode() {
-            isAdminSignUpMode = !isAdminSignUpMode;
-            const heading = document.getElementById('admin-auth-heading');
-            const label = document.getElementById('admin-auth-btn-label');
-            const toggleBtn = document.getElementById('admin-auth-mode-toggle');
-            const errBox = document.getElementById('admin-auth-error');
-            if (errBox) errBox.classList.add('hidden');
-
-            if (isAdminSignUpMode) {
-                if (heading) heading.textContent = "Create Faculty Account";
-                if (label) label.textContent = "Create Account with Email";
-                if (toggleBtn) toggleBtn.textContent = "Already have an account? Sign In with Email";
-            } else {
-                if (heading) heading.textContent = "Faculty / Admin Login";
-                if (label) label.textContent = "Sign In with Email";
-                if (toggleBtn) toggleBtn.textContent = "Need a faculty account? Create one with Email/Password";
+        // Google authentication is for students only.
+        async function handleGoogleSignIn(role = 'student') {
+            if (role !== 'student') {
+                showToast("Use your administrator email and password.", true);
+                return;
             }
-        }
-
-        // Google Sign-In Handler (for both Admin/Faculty and Student)
-        async function handleGoogleSignIn(role = 'admin') {
             if (!window.firebaseSignInWithGoogle) {
                 showToast("Firebase Google Sign-In is still initializing. Please try again in a moment.", true);
                 return;
@@ -2485,33 +2411,6 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                     return;
                 }
 
-                // Admin / Faculty Google Sign-In
-                adminEmail = user.email || user.displayName || 'Admin';
-                const idToken = await user.getIdToken();
-                try {
-                    const res = await fetch('/api/admin/auth/firebase-login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: user.email, uid: user.uid, id_token: idToken })
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        adminToken = data.access_token;
-                    } else {
-                        adminToken = idToken;
-                    }
-                } catch (apiErr) {
-                    adminToken = idToken;
-                }
-
-                localStorage.setItem('sbk_quiz_admin_token', adminToken);
-                localStorage.setItem('sbk_quiz_admin_email', adminEmail);
-                localStorage.setItem('quizmaster_admin_token', adminToken);
-                localStorage.setItem('quizmaster_admin_email', adminEmail);
-                showToast(`Welcome, ${user.displayName || adminEmail}!`);
-                updateNavHeader();
-                initRealtimeFirestoreProctoring();
-                navigateTo('admin');
             } catch (err) {
                 console.error("Google Sign-In Error:", err);
                 let msg = "Google Sign-In could not be completed.";
@@ -2560,7 +2459,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             navigateTo('landing');
         }
 
-        // Admin Firebase (Email/Password Sign-In & Sign-Up) + Server Authentication Submission
+        // Only the backend can authenticate a provisioned administrator.
         async function handleAdminFirebaseLogin(e) {
             e.preventDefault();
             const email = document.getElementById('admin-auth-email').value.trim();
@@ -2569,128 +2468,37 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             const errText = document.getElementById('admin-auth-error-text');
             const btn = document.getElementById('admin-auth-btn');
             const label = document.getElementById('admin-auth-btn-label');
-
-            if (!email || !password) {
-                errText.textContent = "Please enter both email and password.";
-                errBox.classList.remove('hidden');
-                return;
-            }
-
-            localStorage.setItem('sbk_quiz_firebase_role', 'admin');
             btn.disabled = true;
-            label.textContent = isAdminSignUpMode ? "Creating account..." : "Verifying credentials...";
-
+            label.textContent = "Verifying credentials...";
             try {
-                let authed = false;
-
-                // 1. If in Sign-Up mode, create the user in Firebase Authentication first
-                if (isAdminSignUpMode && window.firebaseSignUp) {
-                    const userCredential = await window.firebaseSignUp(email, password);
-                    const user = userCredential.user;
-                    window.firebaseUser = user;
-                    adminEmail = user.email;
-                    const idToken = await user.getIdToken();
-                    try {
-                        const res = await fetch('/api/admin/auth/firebase-login', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email: user.email, uid: user.uid, id_token: idToken })
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            adminToken = data.access_token;
-                        } else {
-                            adminToken = idToken;
-                        }
-                    } catch (apiErr) {
-                        adminToken = idToken;
-                    }
-                    authed = true;
-                }
-
-                // 2. Try Firebase Email/Password Sign-In
-                if (!authed && window.firebaseSignIn) {
-                    try {
-                        const userCredential = await window.firebaseSignIn(email, password);
-                        const user = userCredential.user;
-                        window.firebaseUser = user;
-                        adminEmail = user.email;
-                        const idToken = await user.getIdToken();
-
-                        try {
-                            const res = await fetch('/api/admin/auth/firebase-login', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ email: user.email, uid: user.uid, id_token: idToken })
-                            });
-                            if (res.ok) {
-                                const data = await res.json();
-                                adminToken = data.access_token;
-                            } else {
-                                adminToken = idToken;
-                            }
-                        } catch (apiErr) {
-                            adminToken = idToken;
-                        }
-                        authed = true;
-                    } catch (fbSignInErr) {
-                        // Fall back to direct backend login if local admin credentials are used
-                        console.warn("Firebase Email/Password notice, checking backend auth:", fbSignInErr.code || fbSignInErr.message);
-                    }
-                }
-
-                // 3. Fallback: Server Authoritative Backend Admin Login
-                if (!authed) {
-                    const res = await fetch('/api/admin/auth/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password })
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        adminToken = data.access_token;
-                        adminEmail = data.email || email;
-                        authed = true;
-
-                        // Also register in Firebase Auth in the background if not registered yet
-                        if (window.firebaseSignUp) {
-                            window.firebaseSignUp(email, password).catch(() => {});
-                        }
-                    }
-                }
-
-                if (authed) {
-                    localStorage.setItem('sbk_quiz_admin_token', adminToken);
-                    localStorage.setItem('sbk_quiz_admin_email', adminEmail);
-                    localStorage.setItem('quizmaster_admin_token', adminToken);
-                    localStorage.setItem('quizmaster_admin_email', adminEmail);
-                    errBox.classList.add('hidden');
-                    showToast(isAdminSignUpMode ? "Faculty account created & signed in!" : "Administrator sign in successful!");
-                    updateNavHeader();
-                    initRealtimeFirestoreProctoring();
-                    navigateTo('admin');
-                } else {
-                    throw new Error("Invalid admin email or password.");
-                }
+                const res = await fetch('/api/admin/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                if (!res.ok) throw new Error("Invalid admin email or password.");
+                const data = await res.json();
+                if (!data.access_token) throw new Error("Admin authentication failed.");
+                adminToken = data.access_token;
+                adminEmail = data.email;
+                localStorage.setItem('sbk_quiz_admin_token', adminToken);
+                localStorage.setItem('sbk_quiz_admin_email', adminEmail);
+                localStorage.setItem('quizmaster_admin_token', adminToken);
+                localStorage.setItem('quizmaster_admin_email', adminEmail);
+                errBox.classList.add('hidden');
+                showToast("Administrator sign in successful!");
+                updateNavHeader();
+                navigateTo('admin');
             } catch (err) {
-                console.error("Admin Auth Failure:", err);
-                let msg = "Invalid admin email or password. Please verify your credentials.";
-                if (err.code === 'auth/email-already-in-use') {
-                    msg = "This email is already registered. Switch to Sign In instead.";
-                } else if (err.code === 'auth/weak-password') {
-                    msg = "Password should be at least 6 characters.";
-                } else if (err.code === 'auth/operation-not-allowed') {
-                    msg = "Email/Password sign-in is not enabled yet in Firebase Console > Authentication > Sign-in method.";
-                } else if (err.code === 'auth/too-many-requests') {
-                    msg = "Access temporarily blocked due to repeated failed attempts. Please try again later.";
-                } else if (err.message && !err.code) {
-                    msg = err.message;
-                }
-                errText.textContent = msg;
+                adminToken = null;
+                adminEmail = null;
+                ['sbk_quiz_admin_token', 'sbk_quiz_admin_email', 'quizmaster_admin_token', 'quizmaster_admin_email'].forEach(key => localStorage.removeItem(key));
+                updateNavHeader();
+                errText.textContent = err.message || "Admin sign in failed. Please try again.";
                 errBox.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
-                label.textContent = isAdminSignUpMode ? "Create Account with Email" : "Sign In with Email";
+                label.textContent = "Sign In with Email";
             }
         }
 
@@ -2746,7 +2554,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             const mobileNavAdminBtn = document.getElementById('mobile-nav-admin');
             const ctaBtn = document.getElementById('btn-take-quiz-cta');
 
-            const isAdmin = !!adminToken || !!window.firebaseUser;
+            const isAdmin = !!adminToken;
             const isStudent = !!studentName;
 
             if (isStudent && !isAdmin) {
@@ -2800,7 +2608,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
         }
 
         function handleLogoClick() {
-            if (adminToken || window.firebaseUser) {
+            if (adminToken) {
                 navigateTo('admin');
             } else if (studentName) {
                 navigateTo('landing');
@@ -2829,7 +2637,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
         // Protected Routing Engine
         function navigateTo(viewName, skipHash = false) {
             if (viewName === 'admin') {
-                const isAdmin = !!adminToken || !!window.firebaseUser;
+                const isAdmin = !!adminToken;
                 if (!isAdmin) {
                     showToast("Administrator login required.", true);
                     viewName = 'login';
@@ -2837,7 +2645,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 }
             } else if (viewName === 'landing' || viewName === 'player' || viewName === 'results') {
                 const isStudent = !!studentName;
-                const isAdmin = !!adminToken || !!window.firebaseUser;
+                const isAdmin = !!adminToken;
                 if (!isStudent && !isAdmin) {
                     showToast("Please enter your name to access quizzes.", true);
                     viewName = 'login';
@@ -3633,14 +3441,14 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
 
         // ------------------ 4. ADMIN PORTAL & DASHBOARD ------------------
         function initAdminView() {
-            const isAdmin = !!adminToken || !!window.firebaseUser;
+            const isAdmin = !!adminToken;
             if (isAdmin) {
                 const loginCard = document.getElementById('admin-login-card');
                 const dashPanel = document.getElementById('admin-dashboard-panel');
                 if (loginCard) loginCard.classList.add('hidden');
                 if (dashPanel) dashPanel.classList.remove('hidden');
                 
-                const userEmail = adminEmail || (window.firebaseUser ? window.firebaseUser.email : 'Admin');
+                const userEmail = adminEmail || 'Admin';
                 const emailEl = document.getElementById('admin-user-email');
                 if (emailEl) emailEl.textContent = userEmail;
                 const sidebarEmailEl = document.getElementById('sidebar-admin-email');
@@ -4353,7 +4161,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
                 return;
             }
 
-            const isAdmin = !!adminToken || !!window.firebaseUser;
+            const isAdmin = !!adminToken;
             if (!isAdmin) {
                 showToast("Administrator authorization required.", true);
                 closeDeleteQuizModal();
@@ -5530,7 +5338,7 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
             } else {
                 if (studentName) {
                     navigateTo('landing', true);
-                } else if (adminToken || window.firebaseUser) {
+                } else if (adminToken) {
                     navigateTo('admin', true);
                 } else {
                     navigateTo('login', true);
@@ -5541,7 +5349,23 @@ EXPLANATION: The Network layer is responsible for logical addressing and routing
         window.addEventListener('hashchange', handleHashRoute);
 
         // Initialize on load
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
+            const savedToken = localStorage.getItem('sbk_quiz_admin_token') || localStorage.getItem('quizmaster_admin_token');
+            if (savedToken) {
+                try {
+                    const res = await fetch('/api/admin/auth/me', {
+                        headers: { 'Authorization': `Bearer ${savedToken}` }
+                    });
+                    if (!res.ok) throw new Error('Admin session expired');
+                    const profile = await res.json();
+                    adminToken = savedToken;
+                    adminEmail = profile.email;
+                } catch {
+                    adminToken = null;
+                    adminEmail = null;
+                    ['sbk_quiz_admin_token', 'sbk_quiz_admin_email', 'quizmaster_admin_token', 'quizmaster_admin_email'].forEach(key => localStorage.removeItem(key));
+                }
+            }
             updateNavHeader();
             handleHashRoute();
         });

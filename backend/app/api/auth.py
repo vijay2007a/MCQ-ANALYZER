@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_admin
@@ -13,38 +12,10 @@ router = APIRouter(prefix="/admin/auth", tags=["Admin Authentication"])
 
 @router.post("/firebase-login", response_model=TokenResponse)
 def admin_firebase_login(request: Request, login_data: FirebaseAuthLoginRequest, db: Session = Depends(get_db)):
-    """
-    Authenticate/Authorize a Firebase-authenticated administrator and return an application access token.
-    """
-    email_clean = str(login_data.email).lower().strip()
-    admin = auth_service.get_admin_by_email(db, email_clean)
-    if not admin:
-        from app.core.security import hash_password
-        admin = Admin(
-            email=email_clean,
-            password_hash=hash_password(login_data.uid or "firebase_admin_auth"),
-            role="ADMIN",
-            is_active=True,
-        )
-        db.add(admin)
-        db.commit()
-        db.refresh(admin)
-
-    if not admin.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin account is deactivated",
-        )
-
-    admin.last_login_at = datetime.now(timezone.utc)
-    db.commit()
-
-    token = create_access_token(subject=admin.id, role=admin.role)
-    return TokenResponse(
-        access_token=token,
-        token_type="bearer",
-        role=admin.role,
-        email=admin.email,
+    """Firebase student identities cannot authenticate as administrators."""
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Admin access requires a provisioned email and password account.",
     )
 
 

@@ -71,6 +71,7 @@ def create_access_token(
         "sub": str(subject),
         "role": role,
         "type": "access",
+        "admin_auth_version": 2,
     }
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt

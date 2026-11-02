@@ -59,23 +59,40 @@ def test_admin_change_password(client, admin_headers):
     assert login_resp.status_code == 200
 
 
-def test_admin_firebase_login_existing_and_new(client, test_admin):
-    # Test for existing admin
-    resp = client.post(
-        "/api/admin/auth/firebase-login",
-        json={"email": "admin@test.com", "uid": "firebase_uid_123"},
-    )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "access_token" in data
-    assert data["email"] == "admin@test.com"
+def test_firebase_cannot_grant_admin_access(client, test_admin, db):
+    from app.models.admin import Admin
+    for email in ["admin@test.com", "stranger@test.com"]:
+        response = client.post("/api/admin/auth/firebase-login", json={
+            "email": email, "uid": "attacker-chosen", "id_token": "unverified"
+        })
+        assert response.status_code == 403
+        assert "access_token" not in response.json()
+    assert db.query(Admin).filter(Admin.email == "stranger@test.com").first() is None
 
-    # Test auto-provisioning new admin from Firebase auth
-    resp2 = client.post(
-        "/api/admin/auth/firebase-login",
-        json={"email": "firebase_admin@test.com", "uid": "firebase_uid_456"},
-    )
-    assert resp2.status_code == 200
-    data2 = resp2.json()
-    assert "access_token" in data2
-    assert data2["email"] == "firebase_admin@test.com"
+
+def test_legacy_admin_tokens_are_rejected(client, test_admin):
+    import jwt
+    from app.core.config import settings
+    token = jwt.encode({"sub": str(test_admin.id), "role": "ADMIN", "type": "access"},
+                       settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    response = client.get("/api/admin/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 401
+
+
+def test_admin_lockdown_provisions_account_and_preserves_password_changes(db, test_admin, monkeypatch):
+    from app.core import database
+    from app.core.security import hash_password, verify_password
+    from app.main import _ensure_default_admins
+    from app.models.admin import Admin
+    monkeypatch.setattr(database, "SessionLocal", lambda: db)
+    legacy_id = test_admin.id
+    _ensure_default_admins()
+    admin = db.query(Admin).filter(Admin.email == "admin123@gmail.com").one()
+    assert admin.is_active
+    assert verify_password("12345678", admin.password_hash)
+    assert not db.get(Admin, legacy_id).is_active
+    admin.password_hash = hash_password("ChangedPassword123!")
+    db.commit()
+    _ensure_default_admins()
+    admin = db.query(Admin).filter(Admin.email == "admin123@gmail.com").one()
+    assert verify_password("ChangedPassword123!", admin.password_hash)
